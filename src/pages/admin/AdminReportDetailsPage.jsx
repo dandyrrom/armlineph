@@ -6,6 +6,7 @@ import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import SimpleImageModal from '../../components/SimpleImageModal';
 import SimpleVideoEmbed from '../../components/SimpleVideoEmbed';
+import EscalationModal from '../../components/EscalationModal'; // <-- IMPORT THE NEW MODAL
 
 function AdminReportDetailsPage() {
   const { reportId } = useParams();
@@ -20,11 +21,12 @@ function AdminReportDetailsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [adminNames, setAdminNames] = useState({});
   
-  // State for image modal - SIMPLIFIED like SPG side
+  // NEW STATE: For controlling the escalation modal
+  const [isEscalationModalOpen, setIsEscalationModalOpen] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  // REMOVED: const [images, setImages] = useState([]); // No separate images state
-
+  
   const statusWorkflow = {
     'Submitted': ['Under Review'],
     'Under Review': ['Action Taken', 'Resolved'],
@@ -37,7 +39,6 @@ function AdminReportDetailsPage() {
     return statusWorkflow[report.status] || [];
   };
 
-  // Function to get admin name from email/UID
   const getAdminName = async (authorId, authorName) => {
     if (adminNames[authorId]) {
       return adminNames[authorId];
@@ -73,16 +74,13 @@ function AdminReportDetailsPage() {
     }
   };
 
-  // Get images array (support both old single image and new multiple images) - LIKE SPG SIDE
   const getImages = () => {
     if (!report) return [];
     
-    // Support for new multiple images format
     if (report.imageUrls && report.imageUrls.length > 0) {
       return report.imageUrls;
     }
     
-    // Support for old single image format (backward compatibility)
     if (report.imageUrl) {
       return [report.imageUrl];
     }
@@ -101,7 +99,6 @@ function AdminReportDetailsPage() {
         const reportData = { id: docSnap.id, ...docSnap.data() };
         setReport(reportData);
         setSelectedStatus(reportData.status);
-        // REMOVED: setImages(getImagesFromReport(reportData)); // No separate images state
 
         if (!reportData.isAnonymous && reportData.authorId) {
           try {
@@ -150,25 +147,18 @@ function AdminReportDetailsPage() {
     updateDisplayNames();
   }, [report]);
   
-
-  // Function to open image modal - SIMPLIFIED like SPG side
   const openImageModal = (index) => {
-    const images = getImages(); // Get current images
+    const images = getImages();
     if (images && images.length > 0 && index >= 0 && index < images.length) {
-      console.log('Opening modal with index:', index, 'Images:', images);
       setCurrentImageIndex(index);
       setIsModalOpen(true);
-    } else {
-      console.warn('Cannot open modal: invalid images array or index', { images, index });
     }
   };
-
-  // Function to close image modal
+  
   const closeImageModal = () => {
     setIsModalOpen(false);
   };
 
-  // Function to navigate to next image - UPDATED to use getImages()
   const nextImage = () => {
     const images = getImages();
     if (images.length > 0 && currentImageIndex < images.length - 1) {
@@ -176,7 +166,6 @@ function AdminReportDetailsPage() {
     }
   };
 
-  // Function to navigate to previous image - UPDATED to use getImages()
   const prevImage = () => {
     if (currentImageIndex > 0) {
       setCurrentImageIndex(currentImageIndex - 1);
@@ -269,12 +258,11 @@ function AdminReportDetailsPage() {
   );
 
   const allowedStatuses = getNextAllowedStatuses();
-  const images = getImages(); // Get images from report like SPG side
+  const images = getImages();
 
   return (
     <div className="flex-grow bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
         <Link 
           to="/admin/reports" 
           className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 transition-colors"
@@ -286,9 +274,7 @@ function AdminReportDetailsPage() {
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Core Report Details */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Report Details Card */}
             <div className="bg-white shadow-xl rounded-2xl overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
                 <h1 className="text-2xl font-bold">Report Details</h1>
@@ -358,12 +344,10 @@ function AdminReportDetailsPage() {
                   </div>
                 </div>
 
-                {/* Evidence Section */}
                 {(images.length > 0 || report.videoUrl) && (
                   <div className="mt-8 pt-8 border-t">
                     <h2 className="text-lg font-semibold text-gray-900 mb-6">Evidence</h2>
 
-                    {/* Images Section */}
                     {images.length > 0 && (
                       <div className="mb-8">
                         <div className="flex items-center justify-between mb-4">
@@ -406,7 +390,6 @@ function AdminReportDetailsPage() {
                       </div>
                     )}
 
-                    {/* Video Section */}
                     {report.videoUrl && (
                       <div>
                         <h3 className="text-md font-medium text-gray-700 mb-4">Video Evidence</h3>
@@ -418,7 +401,6 @@ function AdminReportDetailsPage() {
               </div>
             </div>
 
-            {/* Communication Log Section */}
             <div className="bg-white shadow-xl rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
 
@@ -445,7 +427,6 @@ function AdminReportDetailsPage() {
                 )}
               </div>
 
-
               <form onSubmit={handlePostMessage} className="mt-6 border-t pt-6">
                 <label htmlFor="newMessage" className="text-sm font-bold text-gray-600 block mb-2">
                   Post an Update or Message
@@ -470,9 +451,7 @@ function AdminReportDetailsPage() {
             </div>
           </div>
 
-          {/* Right Column: Actions Panel */}
           <div className="space-y-8">
-            {/* Status Update Card */}
             <div className="bg-white shadow-xl rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Report Actions</h2>
               
@@ -518,7 +497,11 @@ function AdminReportDetailsPage() {
                   <label className="text-sm font-bold text-gray-600 block mb-2">
                     External Escalation
                   </label>
-                  <button className="w-full px-4 py-3 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition-colors text-sm">
+                  {/* UPDATE: Added onClick to open the modal */}
+                  <button 
+                    onClick={() => setIsEscalationModalOpen(true)}
+                    className="w-full px-4 py-3 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition-colors text-sm"
+                  >
                     Escalate to Authorities
                   </button>
                   <p className="text-xs text-gray-500 mt-2">
@@ -531,7 +514,6 @@ function AdminReportDetailsPage() {
         </div>
       </div>
 
-      {/* Image Modal - Only render if there are images AND modal is open - LIKE SPG SIDE */}
       {images.length > 0 && isModalOpen && (
         <SimpleImageModal
           isOpen={isModalOpen}
@@ -542,6 +524,12 @@ function AdminReportDetailsPage() {
           onPrev={prevImage}
         />
       )}
+      
+      {/* RENDER THE NEW MODAL */}
+      <EscalationModal 
+        isOpen={isEscalationModalOpen} 
+        onClose={() => setIsEscalationModalOpen(false)} 
+      />
     </div>
   );
 }
