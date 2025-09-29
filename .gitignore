@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.out/
+.next/
+.vite/
+
+# Logs and caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+.cache/
+.parcel-cache/
+
+# Environment files (do NOT commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Coverage
+coverage/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Optional: editor-created backup variants of lockfile
+package-lock.json#*
