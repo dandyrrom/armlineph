@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@keyframes flash {
+    0% { background-color: #FEF9C3; } /* A light yellow */
+    100% { background-color: transparent; }
+  }
+  
+  .flash-new {
+    animation: flash 1.5s ease-out;
+  }
