@@ -18,8 +18,8 @@ import LoginPage from './pages/LoginPage.jsx';
 import SignUpPage from './pages/SignUpPage.jsx';
 import AnonymousReportPage from './pages/AnonymousReportPage.jsx';
 import CheckStatusPage from './pages/CheckStatusPage.jsx';
-import ResourcesPage from './pages/ResourcesPage.jsx'; // <-- IMPORT NEW PAGE
-import AboutUsPage from './pages/AboutUsPage.jsx';   // <-- IMPORT NEW PAGE
+import ResourcesPage from './pages/ResourcesPage.jsx';
+import AboutUsPage from './pages/AboutUsPage.jsx';
 
 // --- Import Authenticated User Pages ---
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -29,16 +29,16 @@ import ReportDetailsPage from './pages/ReportDetailsPage.jsx';
 // --- Import Admin Pages ---
 import AdminLoginPage from './pages/admin/AdminLoginPage.jsx';
 import AdminRegisterPage from './pages/admin/AdminRegisterPage.jsx';
-import SuperAdminDashboard from './pages/admin/SuperAdminDashboard.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminReportDetailsPage from './pages/admin/AdminReportDetailsPage.jsx';
+import AccountManagementPage from './pages/admin/AccountManagementPage.jsx'; // <-- IMPORT NEW PAGE
 
 
 import './index.css';
 
 const router = createBrowserRouter([
 
-  // --- NEW ADMIN ROUTE STRUCTURE ---
+  // --- NEW, INTEGRATED ADMIN ROUTE STRUCTURE ---
   {
     path: "/admin",
     element: (
@@ -49,6 +49,15 @@ const router = createBrowserRouter([
     children: [
       { path: "reports", element: <AdminDashboard /> },
       { path: "report/:reportId", element: <AdminReportDetailsPage /> },
+      // --- NEW ROUTE FOR SUPER ADMINS ---
+      { 
+        path: "accounts", 
+        element: (
+          <SuperAdminRoute>
+            <AccountManagementPage />
+          </SuperAdminRoute>
+        ) 
+      },
     ],
   },
 
@@ -56,41 +65,24 @@ const router = createBrowserRouter([
   { path: "/admin/login", element: <AdminLoginPage /> },
   { path: "/admin/register", element: <AdminRegisterPage /> },
 
-  // --- SUPER ADMIN PROTECTED ROUTE ---
-  {
-    path: "/admin/dashboard",
-    element: (
-      <SuperAdminRoute>
-        <SuperAdminDashboard />
-      </SuperAdminRoute>
-    ),
-  },
-
+  // --- OLD SUPER ADMIN ROUTE IS NOW REMOVED ---
+  
   // --- Public and Authenticated User Routes (Main Layout) ---
   {
     element: <App />,
     children: [
       { path: "/", element: <HomePage /> },
-      { path: "resources", element: <ResourcesPage /> }, // <-- ADD NEW ROUTE
-      { path: "about", element: <AboutUsPage /> },     // <-- ADD NEW ROUTE
+      { path: "resources", element: <ResourcesPage /> },
+      { path: "about", element: <AboutUsPage /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignUpPage /> }, 
       { path: "anonymous-report", element: <AnonymousReportPage /> }, 
       { path: "check-status", element: <CheckStatusPage /> }, 
       
       // --- PROTECTED ROUTES ---
-      {
-        path: "dashboard",
-        element: <ProtectedRoute><DashboardPage /></ProtectedRoute>,
-      },
-      {
-        path: "submit-report",
-        element: <ProtectedRoute><SubmitReportPage /></ProtectedRoute>,
-      },
-      {
-        path: "report/:reportId",
-        element: <ProtectedRoute><ReportDetailsPage /></ProtectedRoute>,
-      },
+      { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
+      { path: "submit-report", element: <ProtectedRoute><SubmitReportPage /></ProtectedRoute> },
+      { path: "report/:reportId", element: <ProtectedRoute><ReportDetailsPage /></ProtectedRoute> },
     ],
   },
 ]);

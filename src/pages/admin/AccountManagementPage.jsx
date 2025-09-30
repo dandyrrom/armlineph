@@ -1,0 +1,128 @@
+// src/pages/admin/AccountManagementPage.jsx
+
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
+import { useAuth } from '../../context/AuthContext';
+
+function AccountManagementPage() {
+  const { currentUser } = useAuth();
+  const [allUsers, setAllUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [adminSchool, setAdminSchool] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('pending'); // Default to show pending users
+
+  useEffect(() => {
+    const fetchSchoolAndUsers = async () => {
+      if (!currentUser) return;
+      setIsLoading(true);
+
+      try {
+        const adminDocRef = doc(db, 'users', currentUser.uid);
+        const adminDocSnap = await getDoc(adminDocRef);
+        const schoolOfAdmin = adminDocSnap.exists() ? adminDocSnap.data().school : null;
+
+        if (schoolOfAdmin) {
+          setAdminSchool(schoolOfAdmin);
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('school', '==', schoolOfAdmin));
+          const querySnapshot = await getDocs(q);
+          const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setAllUsers(users);
+        }
+      } catch (error) {
+        console.error("Error fetching users: ", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSchoolAndUsers();
+  }, [currentUser]);
+
+  const filteredUsers = useMemo(() => {
+    if (filterStatus === 'all') {
+      return allUsers;
+    }
+    return allUsers.filter(user => user.status === filterStatus);
+  }, [allUsers, filterStatus]);
+
+  const handleUpdateStatus = async (userId, newStatus) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, { status: newStatus });
+      // Update the user in the local state to instantly reflect the change
+      setAllUsers(prevUsers => prevUsers.map(user => 
+        user.id === userId ? { ...user, status: newStatus } : user
+      ));
+    } catch (error) {
+      console.error("Error updating user status: ", error);
+    }
+  };
+
+  return (
+    <div className="bg-white shadow-xl rounded-2xl">
+      <div className="p-6 border-b">
+        <h1 className="text-xl font-bold text-gray-900">Account Management</h1>
+        <p className="mt-1 text-sm text-gray-600">Managing accounts for: <span className="font-semibold">{adminSchool || '...'}</span></p>
+      </div>
+
+      <div className="p-4 bg-gray-50 border-b">
+        <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Filter by status:</label>
+        <select
+          id="status-filter"
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="mt-1 p-2 border border-gray-300 rounded-md"
+        >
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+
+      {isLoading ? (
+        <p className="p-6">Loading accounts...</p>
+      ) : filteredUsers.length > 0 ? (
+        <ul className="divide-y divide-gray-200">
+          {filteredUsers.map(user => (
+            <li key={user.id} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                <p className="font-semibold text-gray-800">{user.fullName}</p>
+                <p className="text-sm text-gray-500">{user.email}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Role: <span className="font-medium capitalize">{user.role || user.userType || 'N/A'}</span>
+                </p>
+              </div>
+              <div className="mt-4 sm:mt-0 flex items-center gap-2">
+                {user.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleUpdateStatus(user.id, 'approved')}
+                      className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(user.id, 'rejected')}
+                      className="px-4 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
+                 {user.status === 'approved' && (
+                   <span className="px-3 py-1 text-xs font-medium uppercase rounded-full bg-green-100 text-green-800">Approved</span>
+                 )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="p-6 text-gray-500">No accounts match the current filter.</p>
+      )}
+    </div>
+  );
+}
+
+export default AccountManagementPage;
