@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc, updateDoc } from "firebase/firestore";
-import { db, getSchools } from '../services/firebase';
+import { db, getSchools, getCategories } from '../services/firebase'; // <-- IMPORT getCategories
 
 function AnonymousReportPage() {
   const [school, setSchool] = useState('');
@@ -12,22 +12,26 @@ function AnonymousReportPage() {
   const [imageFiles, setImageFiles] = useState([]); 
   const [imagePreviews, setImagePreviews] = useState([]);
   const [videoUrl, setVideoUrl] = useState('');
-
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCaseId, setSubmittedCaseId] = useState(null);
   const [schools, setSchools] = useState([]);
+  const [categories, setCategories] = useState([]); // <-- NEW STATE FOR CATEGORIES
 
   useEffect(() => {
-    const fetchSchools = async () => {
+    // Fetch both schools and categories when the component mounts
+    const fetchData = async () => {
       try {
         const schoolsList = await getSchools();
         setSchools(schoolsList);
-      } catch (error) {
-        console.error("Failed to fetch schools:", error);
+        const categoriesList = await getCategories();
+        setCategories(categoriesList);
+      } catch (err) {
+        console.error("Failed to fetch initial data:", err);
+        setError("Could not load form data. Please refresh the page.");
       }
     };
-    fetchSchools();
+    fetchData();
   }, []);
 
   const handleImageChange = (e) => {
@@ -169,14 +173,16 @@ function AnonymousReportPage() {
             <label htmlFor="category" className="text-sm font-bold text-gray-600 block">Category</label>
             <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required>
               <option value="" disabled>Choose a category</option>
-              <option>Bullying</option>
-              <option>Harassment</option>
-              <option>Discrimination</option>
-              <option>Physical Violence</option>
-              <option>Mental Health Concern</option>
-              <option>Other</option>
+              {categories.length === 0 ? (
+                <option disabled>Loading categories...</option>
+              ) : (
+                categories.map(cat => (
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))
+              )}
             </select>
           </div>
+          
           <div>
             <label htmlFor="description" className="text-sm font-bold text-gray-600 block">Description of Incident</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows="5" className="w-full p-2 border border-gray-300 rounded mt-1" required></textarea>

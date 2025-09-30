@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, updateDoc, doc, getDoc } from "firebase/firestore";
-import { db } from '../services/firebase';
+import { db, getCategories } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 
 function SubmitReportPage() {
@@ -19,14 +19,22 @@ function SubmitReportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userSchool, setUserSchool] = useState('');
   const [isLoadingSchool, setIsLoadingSchool] = useState(true);
+  const [categories, setCategories] = useState([]); // <-- NEW STATE FOR CATEGORIES
 
   useEffect(() => {
-    const fetchUserSchool = async () => {
+    // This function will fetch all the necessary data when the page loads
+    const fetchInitialData = async () => {
+      // Don't run if no user is logged in
       if (!currentUser) {
         setIsLoadingSchool(false);
         return;
       }
+      
+      // Set loading state to true at the beginning
+      setIsLoadingSchool(true);
+      
       try {
+        // --- Part 1: Fetch the User's School ---
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
@@ -37,16 +45,22 @@ function SubmitReportPage() {
           console.error("User document not found!");
           setError("Could not load your profile information.");
         }
+        
+        // --- Part 2: Fetch the Categories from Firestore ---
+        const categoriesList = await getCategories();
+        setCategories(categoriesList);
+
       } catch (err) {
-        console.error("Error fetching user school: ", err);
-        setError("Failed to load your school information.");
+        console.error("Error fetching initial data: ", err);
+        setError("Failed to load required form data. Please try refreshing the page.");
       } finally {
+        // Set loading state to false once everything is done (or if an error occurs)
         setIsLoadingSchool(false);
       }
     };
 
-    fetchUserSchool();
-  }, [currentUser]);
+    fetchInitialData();
+  }, [currentUser]); // This hook runs once when the component mounts or if the user changes
 
   // Handle image selection with previews and validation
   const handleImageChange = (e) => {
@@ -205,20 +219,15 @@ function SubmitReportPage() {
           {/* ===== CATEGORY SELECTION ===== */}
           <div>
             <label htmlFor="category" className="text-sm font-bold text-gray-600 block">Category</label>
-            <select 
-              id="category" 
-              value={category} 
-              onChange={(e) => setCategory(e.target.value)} 
-              className="w-full p-3 border border-gray-300 rounded mt-1" 
-              required
-            >
+            <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-3 border border-gray-300 rounded mt-1" required>
               <option value="Choose a Category" disabled>Choose a Category</option>
-              <option>Bullying</option>
-              <option>Harassment</option>
-              <option>Discrimination</option>
-              <option>Physical Violence</option>
-              <option>Mental Health Concern</option>
-              <option>Other</option>
+              {categories.length === 0 ? (
+                <option disabled>Loading...</option>
+              ) : (
+                categories.map(cat => (
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))
+              )}
             </select>
           </div>
 

@@ -12,8 +12,6 @@ function AdminLoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // src/pages/admin/AdminLoginPage.jsx - Update the handleLogin function
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -29,10 +27,10 @@ function AdminLoginPage() {
         if (userData.role === 'admin' || userData.role === 'superAdmin') {
           if (userData.status === 'approved') {
             if (userData.role === 'superAdmin') {
-              navigate('/admin/dashboard');
+              // --- THE FIX: Redirect to the new accounts page ---
+              navigate('/admin/accounts'); 
             } else {
-              // --- UPDATE THIS LINE ---
-              navigate('/admin/reports'); // Redirect regular admin to the new dashboard
+              navigate('/admin/reports');
             }
           } else {
             setError('Your admin account is still pending approval.');
@@ -62,7 +60,6 @@ function AdminLoginPage() {
         <h2 className="text-2xl font-bold text-center text-gray-900">Admin Sign In</h2>
         {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
         <form onSubmit={handleLogin} className="space-y-4">
-          {/* Form fields are unchanged */}
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700 block mb-1">Official School Email</label>
             <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />

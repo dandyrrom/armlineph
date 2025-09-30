@@ -21,10 +21,18 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// NEW FUNCTION TO FETCH SCHOOLS
+// FUNCTION TO FETCH SCHOOLS
 export const getSchools = async () => {
   const schoolsCollection = collection(db, 'schools');
   const q = query(schoolsCollection, orderBy('name', 'asc')); // Order schools alphabetically
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+// --- FUNCTION TO FETCH CATEGORIES ---
+export const getCategories = async () => {
+  const categoriesCollection = collection(db, 'categories');
+  const q = query(categoriesCollection, orderBy('name', 'asc')); // Order them alphabetically
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
