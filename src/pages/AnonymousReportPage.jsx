@@ -3,36 +3,86 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc, updateDoc } from "firebase/firestore";
-import { db, getSchools, getCategories } from '../services/firebase'; // <-- IMPORT getCategories
+import { db, getSchools, getCategories } from '../services/firebase';
 
 function AnonymousReportPage() {
+  // State for new structured fields
+  const [incidentDate, setIncidentDate] = useState('');
+  const [incidentTime, setIncidentTime] = useState('');
+  const [location, setLocation] = useState('');
+  const [partiesInvolved, setPartiesInvolved] = useState('');
+  const [witnesses, setWitnesses] = useState('');
+  const [desiredOutcome, setDesiredOutcome] = useState('');
+
+  // Existing state
   const [school, setSchool] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [imageFiles, setImageFiles] = useState([]); 
+  const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [videoUrl, setVideoUrl] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCaseId, setSubmittedCaseId] = useState(null);
   const [schools, setSchools] = useState([]);
-  const [categories, setCategories] = useState([]); // <-- NEW STATE FOR CATEGORIES
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    // Fetch both schools and categories when the component mounts
     const fetchData = async () => {
       try {
-        const schoolsList = await getSchools();
-        setSchools(schoolsList);
-        const categoriesList = await getCategories();
-        setCategories(categoriesList);
+        setSchools(await getSchools());
+        setCategories(await getCategories());
       } catch (err) {
-        console.error("Failed to fetch initial data:", err);
         setError("Could not load form data. Please refresh the page.");
       }
     };
     fetchData();
   }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!school || !category || !incidentDate || !location || description.trim().length < 10) {
+      setError('Please fill out all required fields marked with an asterisk (*).');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const selectedCategoryObject = categories.find(c => c.name === category);
+      const priority = selectedCategoryObject ? selectedCategoryObject.priority : 'Medium';
+
+      const imageUrls = [];
+      if (imageFiles.length > 0) {
+        for (const imageFile of imageFiles) {
+          const formData = new FormData();
+          formData.append('key', import.meta.env.VITE_IMGBB_API_KEY);
+          formData.append('image', imageFile);
+          const response = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
+          const result = await response.json();
+          if (result.success) imageUrls.push(result.data.url);
+          else throw new Error(result.error.message || 'An image upload failed');
+        }
+      }
+      
+      const newReportRef = await addDoc(collection(db, "reports"), {
+        school, category, description, imageUrls, videoUrl: videoUrl.trim(),
+        incidentDate, incidentTime, location, partiesInvolved, witnesses, desiredOutcome,
+        priority,
+        status: "Submitted", createdAt: new Date(), isAnonymous: true, authorId: null,
+      });
+
+      const autoId = newReportRef.id;
+      const year = new Date().getFullYear().toString().slice(-2);
+      const shortId = autoId.substring(0, 6).toUpperCase();
+      const caseId = `ARMLN-${year}-${shortId}`;
+      await updateDoc(newReportRef, { caseId });
+      setSubmittedCaseId(caseId);
+    } catch (err) {
+      setError(`Submission failed: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -71,72 +121,6 @@ function AnonymousReportPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // --- UPDATED: handleSubmit function with full logic ---
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (description.trim().length < 10 || !school || !category) {
-      setError('Please fill out all required fields (School, Category, and Description).');
-      return;
-    }
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      const imageUrls = []; // To store the URLs of uploaded images
-
-      // Loop through each selected file and upload it
-      if (imageFiles.length > 0) {
-        for (const imageFile of imageFiles) {
-          const formData = new FormData();
-          formData.append('key', import.meta.env.VITE_IMGBB_API_KEY);
-          formData.append('image', imageFile);
-
-          const response = await fetch('https://api.imgbb.com/1/upload', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const result = await response.json();
-
-          if (result.success) {
-            imageUrls.push(result.data.url); // Add the URL to our array
-          } else {
-            throw new Error(result.error.message || 'An image upload failed');
-          }
-        }
-      }
-
-      // Create the new report document in Firestore
-      const newReportRef = await addDoc(collection(db, "reports"), {
-        school,
-        category,
-        description,
-        imageUrls, // Save the array of image URLs
-        videoUrl: videoUrl.trim(),
-        status: "Submitted",
-        createdAt: new Date(),
-        isAnonymous: true,
-        authorId: null,
-      });
-
-      // Generate and save the Case ID
-      const autoId = newReportRef.id;
-      const year = new Date().getFullYear().toString().slice(-2);
-      const shortId = autoId.substring(0, 6).toUpperCase();
-      const caseId = `ARMLN-${year}-${shortId}`;
-
-      await updateDoc(newReportRef, { caseId });
-
-      setSubmittedCaseId(caseId);
-
-    } catch (err) {
-      setError(`Submission failed: ${err.message}`);
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   if (submittedCaseId) {
     return (
        <div className="flex-grow flex items-center justify-center bg-gray-50 p-4">
@@ -159,33 +143,53 @@ function AnonymousReportPage() {
       <div className="w-full max-w-lg bg-white shadow-2xl rounded-2xl p-8 space-y-6">
         <div className="text-center">
           <h2 className="mt-4 text-2xl font-bold text-gray-900">Submit an Anonymous Report</h2>
+          <p className="text-sm text-gray-500 mt-1">Fields marked with * are required.</p>
         </div>
         {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="school" className="text-sm font-bold text-gray-600 block">School</label>
+            <label htmlFor="school" className="text-sm font-bold text-gray-600 block">School *</label>
             <select id="school" value={school} onChange={(e) => setSchool(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required disabled={schools.length === 0}>
               <option value="" disabled>Choose a school</option>
-              {schools.length === 0 ? <option>Loading schools...</option> : schools.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+              {schools.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="category" className="text-sm font-bold text-gray-600 block">Category</label>
+            <label htmlFor="category" className="text-sm font-bold text-gray-600 block">Category *</label>
             <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required>
               <option value="" disabled>Choose a category</option>
-              {categories.length === 0 ? (
-                <option disabled>Loading categories...</option>
-              ) : (
-                categories.map(cat => (
-                  <option key={cat.id} value={cat.name}>{cat.name}</option>
-                ))
-              )}
+              {categories.map(cat => ( <option key={cat.id} value={cat.name}>{cat.name}</option> ))}
             </select>
           </div>
-          
+          <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="incidentDate" className="text-sm font-bold text-gray-600 block">Date of Incident *</label>
+              <input type="date" id="incidentDate" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
+            </div>
+            <div>
+              <label htmlFor="incidentTime" className="text-sm font-bold text-gray-600 block">Time of Incident</label>
+              <input type="time" id="incidentTime" value={incidentTime} onChange={(e) => setIncidentTime(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="location" className="text-sm font-bold text-gray-600 block">Location of Incident *</label>
+              <input type="text" id="location" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" placeholder="e.g., Canteen, Room 201" required />
+            </div>
+          </div>
           <div>
-            <label htmlFor="description" className="text-sm font-bold text-gray-600 block">Description of Incident</label>
+            <label htmlFor="description" className="text-sm font-bold text-gray-600 block">Description of Incident *</label>
             <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows="5" className="w-full p-2 border border-gray-300 rounded mt-1" required></textarea>
+          </div>
+          <div>
+            <label htmlFor="partiesInvolved" className="text-sm font-bold text-gray-600 block">Parties Involved</label>
+            <textarea id="partiesInvolved" value={partiesInvolved} onChange={(e) => setPartiesInvolved(e.target.value)} rows="3" className="w-full p-2 border border-gray-300 rounded mt-1" placeholder="(Optional)"></textarea>
+          </div>
+          <div>
+            <label htmlFor="witnesses" className="text-sm font-bold text-gray-600 block">Witnesses</label>
+            <textarea id="witnesses" value={witnesses} onChange={(e) => setWitnesses(e.target.value)} rows="3" className="w-full p-2 border border-gray-300 rounded mt-1" placeholder="(Optional)"></textarea>
+          </div>
+          <div>
+            <label htmlFor="desiredOutcome" className="text-sm font-bold text-gray-600 block">Desired Outcome</label>
+            <textarea id="desiredOutcome" value={desiredOutcome} onChange={(e) => setDesiredOutcome(e.target.value)} rows="3" className="w-full p-2 border border-gray-300 rounded mt-1" placeholder="(Optional)"></textarea>
           </div>
           <div className="border-t pt-4">
             <p className="text-sm font-bold text-gray-600">Evidence (Optional)</p>
