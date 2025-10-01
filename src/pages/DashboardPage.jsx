@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.jsx
 
-import { useState, useEffect, useMemo } from 'react'; // <-- IMPORT useMemo
+import { useState, useEffect, useMemo } from 'react';
 import { signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { auth, db } from '../services/firebase';
@@ -13,7 +13,7 @@ function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [userFirstName, setUserFirstName] = useState('');
 
-  // --- NEW STATE FOR UI CONTROLS ---
+  // --- STATE FOR UI CONTROLS ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first
@@ -53,8 +53,31 @@ function DashboardPage() {
     fetchUserDataAndReports();
   }, [currentUser]);
 
-  // We will implement the filtering/sorting logic here in the next step
-  const filteredAndSortedReports = reports;
+  // --- FIX IMPLEMENTED HERE ---
+  // Logic for filtering and sorting reports
+  const filteredAndSortedReports = useMemo(() => {
+    return reports
+      .filter(report => {
+        // Search filter (by Case ID)
+        const searchMatch = report.caseId && report.caseId.toLowerCase().includes(searchTerm.toLowerCase());
+        if (searchTerm && !searchMatch) {
+          return false;
+        }
+
+        // Status filter
+        if (filterStatus !== 'All' && report.status !== filterStatus) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort by date
+        const dateA = a.createdAt.seconds;
+        const dateB = b.createdAt.seconds;
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+  }, [reports, searchTerm, filterStatus, sortOrder]); // Dependencies for the calculation
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -77,9 +100,7 @@ function DashboardPage() {
       <div className="bg-white shadow-xl rounded-2xl p-8 mt-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">My Submitted Reports</h2>
 
-        {/* --- NEW UI CONTROLS SECTION --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
-          {/* Search Bar */}
           <div className="md:col-span-1">
             <label htmlFor="search" className="text-sm font-medium text-gray-700 block mb-1">Search by Case ID</label>
             <input
@@ -91,7 +112,6 @@ function DashboardPage() {
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
-          {/* Filter Dropdown */}
           <div>
             <label htmlFor="filterStatus" className="text-sm font-medium text-gray-700 block mb-1">Filter by Status</label>
             <select
@@ -107,7 +127,6 @@ function DashboardPage() {
               <option>Resolved</option>
             </select>
           </div>
-          {/* Sort Button */}
           <div className="flex items-end">
             <button
               onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -149,7 +168,9 @@ function DashboardPage() {
             ))}
           </ul>
         ) : (
-          <p>You have not submitted any reports yet.</p>
+          <div className="text-center py-12">
+            <p className="text-gray-500">You have not submitted any reports yet, or no reports match your filter.</p>
+          </div>
         )}
       </div>
     </div>
