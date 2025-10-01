@@ -32,7 +32,6 @@ function AdminReportDetailsPage() {
     'Resolved': []
   };
 
-  // --- THIS IS THE MISSING FUNCTION ---
   const handleEscalate = async (agency, notes) => {
     if (!currentUser || !report) return;
 
@@ -80,8 +79,6 @@ function AdminReportDetailsPage() {
       alert("Failed to send escalation email. Check the console for details.");
     }
   };
-
-  // (The rest of the file remains the same as before...)
 
   const getNextAllowedStatuses = () => {
     if (!report) return [];
@@ -275,7 +272,20 @@ function AdminReportDetailsPage() {
                   <div><label className="text-sm font-medium text-gray-500">School</label><p className="text-gray-900 font-medium">{report.school}</p></div>
                   <div><label className="text-sm font-medium text-gray-500">Category</label><p className="text-gray-900 font-medium">{report.category}</p></div>
                   <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Submitted By</label><div className="mt-1">{report.isAnonymous ? <span className="px-3 py-1 text-xs font-medium uppercase rounded-full bg-purple-100 text-purple-800">Anonymous User</span> : <div className="flex items-center space-x-2"><span className="px-2 py-1 text-xs font-medium uppercase rounded-full bg-green-100 text-green-800">Verified User</span>{submitterName ? <span className="text-gray-900 font-medium">{submitterName}</span> : <span className="text-gray-500 text-sm">Loading name...</span>}</div>}</div></div>
+                  
+                  {/* --- NEW FIELDS START HERE --- */}
+                  <div className="md:col-span-2 pt-4 border-t"><h3 className="text-md font-semibold text-gray-800 mb-2">Incident Details</h3></div>
+                  <div><label className="text-sm font-medium text-gray-500">Date of Incident</label><p className="text-gray-900 font-medium">{report.incidentDate}</p></div>
+                  <div><label className="text-sm font-medium text-gray-500">Time of Incident</label><p className="text-gray-900 font-medium">{report.incidentTime || 'N/A'}</p></div>
+                  <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Location</label><p className="text-gray-900 font-medium">{report.location}</p></div>
+                  {/* --- NEW FIELDS END HERE --- */}
+                  
                   <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Description of Incident</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.description}</p></div></div>
+
+                  {/* --- MORE NEW FIELDS (conditionally rendered) --- */}
+                  {report.partiesInvolved && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Parties Involved</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.partiesInvolved}</p></div></div>}
+                  {report.witnesses && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Witnesses</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.witnesses}</p></div></div>}
+                  {report.desiredOutcome && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Desired Outcome</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.desiredOutcome}</p></div></div>}
                 </div>
                 {(images.length > 0 || report.videoUrl) && <div className="mt-8 pt-8 border-t"><h2 className="text-lg font-semibold text-gray-900 mb-6">Evidence</h2>{images.length > 0 && <div className="mb-8"><div className="flex items-center justify-between mb-4"><h3 className="text-md font-medium text-gray-700">Images ({images.length})</h3>{images.length > 1 && <button onClick={() => openImageModal(0)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">View All</button>}</div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{images.map((imageUrl, index) => <div key={index} className="group cursor-pointer transform hover:scale-105 transition-transform duration-200" onClick={() => openImageModal(index)}><div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent group-hover:border-blue-500 transition-colors"><img src={imageUrl} alt={`Evidence image ${index + 1}`} className="w-full h-full object-cover" /></div><div className="text-xs text-gray-500 text-center mt-1">Image {index + 1}</div></div>)}</div></div>}{report.videoUrl && <div><h3 className="text-md font-medium text-gray-700 mb-4">Video Evidence</h3><SimpleVideoEmbed videoUrl={report.videoUrl} /></div>}</div>}
               </div>

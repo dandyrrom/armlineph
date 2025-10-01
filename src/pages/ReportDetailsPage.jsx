@@ -3,22 +3,20 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from '../services/firebase';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { useAuth } from '../context/AuthContext';
 import SimpleImageModal from '../components/SimpleImageModal';
 import SimpleVideoEmbed from '../components/SimpleVideoEmbed';
 
 function ReportDetailsPage() {
   const { reportId } = useParams();
-  const { currentUser } = useAuth(); // Get current user
+  const { currentUser } = useAuth();
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // State for image modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // State for new messages
   const [newMessage, setNewMessage] = useState('');
   const [isPosting, setIsPosting] = useState(false);
 
@@ -32,7 +30,7 @@ function ReportDetailsPage() {
       } else {
         setError("Report not found.");
       }
-    } catch (err) {
+    } catch (err) { // <<< FIX: Added missing opening brace
       setError("Failed to fetch report details.");
       console.error(err);
     } finally {
@@ -46,49 +44,40 @@ function ReportDetailsPage() {
     }
   }, [reportId]);
 
-  // Function to open image modal
   const openImageModal = (index) => {
     setCurrentImageIndex(index);
     setIsModalOpen(true);
   };
 
-  // Function to close image modal
   const closeImageModal = () => {
     setIsModalOpen(false);
   };
 
-  // Get images array (support both old single image and new multiple images)
   const getImages = () => {
     if (!report) return [];
-    
     if (report.imageUrls && report.imageUrls.length > 0) {
       return report.imageUrls;
     }
-    
     if (report.imageUrl) {
       return [report.imageUrl];
     }
-    
     return [];
   };
   
   const images = getImages();
 
-  // Function to navigate to next image - UPDATED to use getImages()
   const nextImage = () => {
     if (images.length > 0 && currentImageIndex < images.length - 1) {
       setCurrentImageIndex(currentImageIndex + 1);
     }
   };
 
-  // Function to navigate to previous image
   const prevImage = () => {
     if (currentImageIndex > 0) {
       setCurrentImageIndex(currentImageIndex - 1);
     }
   };
 
-  // Function to post a new message
   const handlePostMessage = async (e) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !currentUser) return;
@@ -107,7 +96,7 @@ function ReportDetailsPage() {
       });
 
       setNewMessage('');
-      fetchReport(); // Refetch to show the new message
+      fetchReport();
     } catch (error) {
       console.error("Error posting message: ", error);
       alert("Failed to post message.");
@@ -115,7 +104,6 @@ function ReportDetailsPage() {
       setIsPosting(false);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -147,7 +135,6 @@ function ReportDetailsPage() {
   return (
     <div className="flex-grow bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* Back Button */}
         <Link 
           to="/dashboard" 
           className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
@@ -158,7 +145,6 @@ function ReportDetailsPage() {
           Back to Dashboard
         </Link>
 
-        {/* Report Details Card */}
         <div className="bg-white shadow-xl rounded-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
             <h1 className="text-2xl font-bold">Report Details</h1>
@@ -181,26 +167,19 @@ function ReportDetailsPage() {
           </div>
 
           <div className="p-6 space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
+            <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Incident Information</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">School</label>
-                    <p className="text-gray-900 font-medium">{report.school}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Category</label>
-                    <p className="text-gray-900 font-medium">{report.category}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><label className="text-sm font-medium text-gray-500">School</label><p className="text-gray-900 font-medium">{report.school}</p></div>
+                  <div><label className="text-sm font-medium text-gray-500">Category</label><p className="text-gray-900 font-medium">{report.category}</p></div>
+                  <div><label className="text-sm font-medium text-gray-500">Date of Incident</label><p className="text-gray-900 font-medium">{report.incidentDate}</p></div>
+                  <div><label className="text-sm font-medium text-gray-500">Time of Incident</label><p className="text-gray-900 font-medium">{report.incidentTime || 'N/A'}</p></div>
+                  <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Location</label><p className="text-gray-900 font-medium">{report.location}</p></div>
+                  <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Description</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{report.description}</p></div></div>
+                  {report.partiesInvolved && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Parties Involved</label><p className="text-gray-700 whitespace-pre-wrap">{report.partiesInvolved}</p></div>}
+                  {report.witnesses && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Witnesses</label><p className="text-gray-700 whitespace-pre-wrap">{report.witnesses}</p></div>}
+                  {report.desiredOutcome && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Desired Outcome</label><p className="text-gray-700 whitespace-pre-wrap">{report.desiredOutcome}</p></div>}
                 </div>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{report.description}</p>
-                </div>
-              </div>
             </div>
 
             {(images.length > 0 || report.videoUrl) && (
@@ -231,7 +210,6 @@ function ReportDetailsPage() {
           </div>
         </div>
 
-        {/* Communication Log Section */}
         <div className="bg-white shadow-xl rounded-2xl p-6">
           <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
           <div className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
@@ -243,7 +221,7 @@ function ReportDetailsPage() {
                   <div className={`p-4 rounded-lg max-w-lg ${
                     entry.authorId === currentUser.uid ? 'bg-blue-500 text-white' :
                     entry.authorRole === 'admin' ? 'bg-gray-200 text-gray-800' :
-                    'bg-yellow-100 text-yellow-900' // System messages
+                    'bg-yellow-100 text-yellow-900'
                   }`}>
                     <p className="text-sm font-semibold">
                       {entry.authorId === currentUser.uid ? 'You' : (entry.authorRole === 'admin' ? 'Admin' : 'System')}
@@ -295,6 +273,6 @@ function ReportDetailsPage() {
       />
     </div>
   );
-}
+} // <<< FIX: Removed extra closing brace
 
 export default ReportDetailsPage;

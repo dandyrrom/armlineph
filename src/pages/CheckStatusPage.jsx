@@ -93,12 +93,22 @@ function CheckStatusPage() {
             {/* Report Details Card */}
             <div className="bg-white shadow-xl rounded-2xl p-8">
               <h3 className="text-xl font-bold text-gray-900">Report Details for <span className="text-blue-600 font-mono">{foundReport.caseId}</span></h3>
-              <div className="mt-6 border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div className="mt-6 border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+                <div><dt className="font-medium text-gray-500">Status</dt><dd className="mt-1"><span className="px-2 py-1 text-xs font-medium uppercase rounded-full bg-yellow-100 text-yellow-800">{foundReport.status}</span></dd></div>
+                <div><dt className="font-medium text-gray-500">Date Submitted</dt><dd className="mt-1 text-gray-900">{foundReport.createdAt ? new Date(foundReport.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</dd></div>
+                
                 <div><dt className="font-medium text-gray-500">School</dt><dd className="mt-1 text-gray-900">{foundReport.school}</dd></div>
                 <div><dt className="font-medium text-gray-500">Category</dt><dd className="mt-1 text-gray-900">{foundReport.category}</dd></div>
-                <div><dt className="font-medium text-gray-500">Date Submitted</dt><dd className="mt-1 text-gray-900">{foundReport.createdAt ? new Date(foundReport.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</dd></div>
-                <div><dt className="font-medium text-gray-500">Status</dt><dd className="mt-1"><span className="px-2 py-1 text-xs font-medium uppercase rounded-full bg-yellow-100 text-yellow-800">{foundReport.status}</span></dd></div>
+                
+                <div><dt className="font-medium text-gray-500">Date of Incident</dt><dd className="mt-1 text-gray-900">{foundReport.incidentDate}</dd></div>
+                <div><dt className="font-medium text-gray-500">Time of Incident</dt><dd className="mt-1 text-gray-900">{foundReport.incidentTime || 'N/A'}</dd></div>
+                
+                <div className="md:col-span-2"><dt className="font-medium text-gray-500">Location</dt><dd className="mt-1 text-gray-900">{foundReport.location}</dd></div>
                 <div className="md:col-span-2"><dt className="font-medium text-gray-500">Description</dt><dd className="mt-1 text-gray-900 whitespace-pre-wrap">{foundReport.description}</dd></div>
+
+                {foundReport.partiesInvolved && <div className="md:col-span-2"><dt className="font-medium text-gray-500">Parties Involved</dt><dd className="mt-1 text-gray-700 whitespace-pre-wrap">{foundReport.partiesInvolved}</dd></div>}
+                {foundReport.witnesses && <div className="md:col-span-2"><dt className="font-medium text-gray-500">Witnesses</dt><dd className="mt-1 text-gray-700 whitespace-pre-wrap">{foundReport.witnesses}</dd></div>}
+                {foundReport.desiredOutcome && <div className="md:col-span-2"><dt className="font-medium text-gray-500">Desired Outcome</dt><dd className="mt-1 text-gray-700 whitespace-pre-wrap">{foundReport.desiredOutcome}</dd></div>}
               </div>
 
               {(images.length > 0 || foundReport.videoUrl) && (

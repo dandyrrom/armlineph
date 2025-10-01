@@ -96,7 +96,11 @@ function SubmitReportPage() {
       const shortId = autoId.substring(0, 6).toUpperCase();
       const caseId = `ARMLN-${year}-${shortId}`;
       await updateDoc(newReportRef, { caseId });
-      navigate('/dashboard');
+
+      // --- CHANGE IMPLEMENTED HERE ---
+      // Redirect to the new report's detail page instead of the dashboard
+      navigate(`/report/${newReportRef.id}`);
+
     } catch (err) {
       setError(`Submission failed: ${err.message}`);
     } finally {
