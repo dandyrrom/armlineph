@@ -13,9 +13,12 @@ function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [adminSchool, setAdminSchool] = useState(null);
   const [newReportIds, setNewReportIds] = useState(new Set());
+  
+  // --- NEW AND UPDATED STATE FOR CONTROLS ---
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterUserType, setFilterUserType] = useState('All');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [searchTerm, setSearchTerm] = useState(''); // <-- NEW
 
   useEffect(() => {
     const fetchAdminInfo = async () => {
@@ -77,6 +80,10 @@ function AdminDashboard() {
   const filteredAndSortedReports = useMemo(() => {
     return allReports
       .filter(report => {
+        // --- UPDATED LOGIC TO INCLUDE SEARCH ---
+        const searchMatch = report.caseId && report.caseId.toLowerCase().includes(searchTerm.toLowerCase());
+        if (searchTerm && !searchMatch) return false;
+        
         if (filterStatus !== 'All' && report.status !== filterStatus) return false;
         if (filterUserType === 'Verified' && report.isAnonymous) return false;
         if (filterUserType === 'Anonymous' && !report.isAnonymous) return false;
@@ -89,7 +96,7 @@ function AdminDashboard() {
         const dateB = b.createdAt.seconds;
         return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
       });
-  }, [allReports, filterStatus, filterUserType, sortOrder]);
+  }, [allReports, filterStatus, filterUserType, sortOrder, searchTerm]); // <-- ADDED searchTerm
 
   const handleReportClick = (reportId) => {
     navigate(`/admin/report/${reportId}`);
@@ -101,17 +108,29 @@ function AdminDashboard() {
         <h1 className="text-xl font-bold text-gray-900">Incoming Reports</h1>
         <p className="mt-1 text-sm text-gray-600">Viewing reports for: <span className="font-semibold">{adminSchool || '...'}</span></p>
       </div>
-      <div className="p-4 flex flex-col sm:flex-row gap-4 bg-gray-50 border-b">
-        <div className="flex-1">
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 border-b items-end">
+        {/* --- NEW SEARCH BAR --- */}
+        <div className="lg:col-span-1">
+          <label htmlFor="search" className="text-xs font-medium text-gray-600 block mb-1">Search by Case ID</label>
+          <input
+            type="text"
+            id="search"
+            placeholder="ARMLN-XX-..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-md text-sm"
+          />
+        </div>
+        <div>
           <label htmlFor="filterStatus" className="text-xs font-medium text-gray-600 block mb-1">Filter by Status</label>
           <select id="filterStatus" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm"><option>All</option><option>Submitted</option><option>Under Review</option><option>Action Taken</option><option>Resolved</option></select>
         </div>
-        <div className="flex-1">
+        <div>
           <label htmlFor="filterUserType" className="text-xs font-medium text-gray-600 block mb-1">Filter by User Type</label>
           <select id="filterUserType" value={filterUserType} onChange={(e) => setFilterUserType(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm"><option>All</option><option>Verified</option><option>Anonymous</option></select>
         </div>
-        <div className="flex items-end">
-          <button onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')} className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-100">Sort by Date ({sortOrder === 'desc' ? 'Newest' : 'Oldest'})</button>
+        <div>
+          <button onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')} className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-100">Sort ({sortOrder === 'desc' ? 'Newest' : 'Oldest'})</button>
         </div>
       </div>
       {isLoading ? <p className="p-6 text-gray-500">Loading reports...</p> : filteredAndSortedReports.length > 0 ? (

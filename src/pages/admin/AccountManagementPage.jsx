@@ -10,7 +10,8 @@ function AccountManagementPage() {
   const [allUsers, setAllUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [adminSchool, setAdminSchool] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('pending'); // Default to show pending users
+  const [filterStatus, setFilterStatus] = useState('pending');
+  const [searchTerm, setSearchTerm] = useState(''); // <-- NEW
 
   useEffect(() => {
     const fetchSchoolAndUsers = async () => {
@@ -41,17 +42,25 @@ function AccountManagementPage() {
   }, [currentUser]);
 
   const filteredUsers = useMemo(() => {
-    if (filterStatus === 'all') {
-      return allUsers;
-    }
-    return allUsers.filter(user => user.status === filterStatus);
-  }, [allUsers, filterStatus]);
+    return allUsers.filter(user => {
+      // Status filter
+      if (filterStatus !== 'all' && user.status !== filterStatus) {
+        return false;
+      }
+      // Search filter
+      if (searchTerm && 
+          !user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !user.email.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+  }, [allUsers, filterStatus, searchTerm]); // <-- ADDED searchTerm
 
   const handleUpdateStatus = async (userId, newStatus) => {
     try {
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, { status: newStatus });
-      // Update the user in the local state to instantly reflect the change
       setAllUsers(prevUsers => prevUsers.map(user => 
         user.id === userId ? { ...user, status: newStatus } : user
       ));
@@ -67,18 +76,32 @@ function AccountManagementPage() {
         <p className="mt-1 text-sm text-gray-600">Managing accounts for: <span className="font-semibold">{adminSchool || '...'}</span></p>
       </div>
 
-      <div className="p-4 bg-gray-50 border-b">
-        <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Filter by status:</label>
-        <select
-          id="status-filter"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="mt-1 p-2 border border-gray-300 rounded-md"
-        >
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="all">All</option>
-        </select>
+      <div className="p-4 bg-gray-50 border-b flex flex-col md:flex-row gap-4">
+        {/* --- NEW SEARCH BAR --- */}
+        <div className="flex-1">
+          <label htmlFor="user-search" className="text-sm font-medium text-gray-700">Search by Name/Email</label>
+          <input
+            id="user-search"
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search..."
+            className="mt-1 p-2 w-full border border-gray-300 rounded-md"
+          />
+        </div>
+        <div className="flex-1">
+          <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Filter by status</label>
+          <select
+            id="status-filter"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="mt-1 p-2 w-full border border-gray-300 rounded-md"
+          >
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="all">All</option>
+          </select>
+        </div>
       </div>
 
       {isLoading ? (
