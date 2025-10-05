@@ -33,12 +33,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // UPDATED RULE: Allow anyone to read the list of schools
     match /schools/{schoolId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if false;
     }
+    // UPDATED RULE: Allow anyone to read the list of categories
     match /categories/{categoryId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if false;
     }
   }
