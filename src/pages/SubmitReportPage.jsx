@@ -29,6 +29,7 @@ function SubmitReportPage() {
   const [userSchool, setUserSchool] = useState('');
   const [isLoadingSchool, setIsLoadingSchool] = useState(true);
   const [categories, setCategories] = useState([]);
+  const [timeHelperText, setTimeHelperText] = useState('');
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -56,9 +57,34 @@ function SubmitReportPage() {
     fetchInitialData();
   }, [currentUser]);
 
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    if (incidentDate === today) {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      setTimeHelperText(`Please select a time no later than the current time (${hours}:${minutes}).`);
+    } else {
+      setTimeHelperText('');
+    }
+  }, [incidentDate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+        // --- NEW VALIDATION LOGIC ---
+    const today = new Date().toISOString().split("T")[0];
+    if (incidentDate === today && incidentTime) {
+      const now = new Date();
+      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      if (incidentTime > currentTime) {
+        setError('The incident time cannot be in the future.');
+        return;
+      }
+    }
+    // --- END NEW VALIDATION ---
+
     if (!category || !incidentDate || !location || description.trim().length < 10) {
       setError('Please fill out all required fields marked with an asterisk (*).');
       return;
@@ -193,7 +219,14 @@ function SubmitReportPage() {
             </div>
             <div>
               <label htmlFor="incidentTime" className="text-sm font-bold text-gray-600 block">Time of Incident</label>
-              <input type="time" id="incidentTime" value={incidentTime} onChange={(e) => setIncidentTime(e.target.value)} className="w-full p-3 border border-gray-300 rounded mt-1" />
+              <input 
+                type="time" 
+                id="incidentTime" 
+                value={incidentTime} 
+                onChange={(e) => setIncidentTime(e.target.value)} 
+                className="w-full p-3 border border-gray-300 rounded mt-1" 
+              />
+              {timeHelperText && <p className="text-xs text-gray-500 mt-1">{timeHelperText}</p>}
             </div>
             <div className="md:col-span-2">
               <label htmlFor="location" className="text-sm font-bold text-gray-600 block">Location of Incident *</label>
