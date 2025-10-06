@@ -1,7 +1,7 @@
 // src/pages/SubmitReportPage.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, updateDoc, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db, getCategories } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 
@@ -68,7 +68,7 @@ function SubmitReportPage() {
     try {
       // Find the selected category object to get its priority
       const selectedCategoryObject = categories.find(c => c.name === category);
-      const priority = selectedCategoryObject ? selectedCategoryObject.priority : 'Medium'; // Default priority
+      const priority = selectedCategoryObject ? selectedCategoryObject.priority : 'Medium';
 
       const imageUrls = [];
       if (imageFiles.length > 0) {
@@ -83,26 +83,34 @@ function SubmitReportPage() {
         }
       }
 
-      const newReportRef = await addDoc(collection(db, "reports"), {
+      // --- NEW LOGIC START ---
+      // 1. Create a document reference with a new, unique ID
+      const newReportRef = doc(collection(db, "reports"));
+
+      // 2. Generate the caseId using the document's unique ID
+      const year = new Date().getFullYear().toString().slice(-2);
+      const shortId = newReportRef.id.substring(0, 6).toUpperCase();
+      const caseId = `ARMLN-${year}-${shortId}`;
+
+      // 3. Create the full report data object
+      const reportData = {
+        caseId: caseId,
         school: userSchool, category, description, imageUrls, videoUrl: videoUrl.trim(),
-        incidentDate, incidentTime, location, partiesInvolved, witnesses, desiredOutcome, // New structured fields
-        priority, // The automatically assigned priority
+        incidentDate, incidentTime, location, partiesInvolved, witnesses, desiredOutcome,
+        priority,
         status: "Submitted", createdAt: new Date(), isAnonymous: isAnonymous,
         authorId: isAnonymous ? null : currentUser.uid, submittedById: currentUser.uid,
-      });
+      };
 
-      const autoId = newReportRef.id;
-      const year = new Date().getFullYear().toString().slice(-2);
-      const shortId = autoId.substring(0, 6).toUpperCase();
-      const caseId = `ARMLN-${year}-${shortId}`;
-      await updateDoc(newReportRef, { caseId });
+      // 4. Use setDoc to create the document with all data at once
+      await setDoc(newReportRef, reportData);
+      // --- NEW LOGIC END ---
 
-      // --- CHANGE IMPLEMENTED HERE ---
-      // Redirect to the new report's detail page instead of the dashboard
       navigate(`/report/${newReportRef.id}`);
 
     } catch (err) {
       setError(`Submission failed: ${err.message}`);
+      console.error(err); // It's good to log the actual error
     } finally {
       setIsSubmitting(false);
     }

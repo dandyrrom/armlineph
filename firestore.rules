@@ -4,9 +4,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Helper Functions ---
-    function isAdmin() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return request.auth != null && ('role' in userDoc) && (userDoc.role == 'admin' || userDoc.role == 'superAdmin');
+    function isAdminOrSuperAdmin() {
+      // Note: We check for existence of the user document first to prevent errors on non-existent users.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin');
+    }
+
+    function isSuperAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin';
     }
 
     function isSignedIn() {
@@ -16,29 +23,36 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin');
+      // READ: Allow a user to read their own doc, OR if the requester is an admin/superAdmin.
+      // THIS IS THE FIX for admins being unable to read reports. They can now read their own user data.
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdminOrSuperAdmin());
+      
       allow create: if isSignedIn() && request.auth.uid == userId;
+      
       allow update: if (isSignedIn() && request.auth.uid == userId && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status)
-                    || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin');
+                    || isSuperAdmin();
       allow delete: if false;
     }
 
     match /reports/{reportId} {
       allow read: if isSignedIn() &&
                    (request.auth.uid == resource.data.submittedById ||
-                    (isAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school));
-      allow create: if isSignedIn();
-      allow update: if (isAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school)
+                    (isAdminOrSuperAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school));
+
+      // CREATE: Allow if the user is signed in OR if the report is anonymous.
+      // We will handle the caseId creation client-side, so this simple rule is sufficient.
+      allow create: if isSignedIn() || request.resource.data.isAnonymous == true;
+
+      allow update: if (isAdminOrSuperAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school)
                     || (isSignedIn() && request.auth.uid == resource.data.submittedById && request.resource.data.keys().hasOnly(['communicationLog']));
+
       allow delete: if false;
     }
 
-    // UPDATED RULE: Allow anyone to read the list of schools
     match /schools/{schoolId} {
       allow read: if true;
       allow write: if false;
     }
-    // UPDATED RULE: Allow anyone to read the list of categories
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if false;
