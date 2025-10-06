@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, addDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import { db, getSchools, getCategories } from '../services/firebase';
 
 function AnonymousReportPage() {
@@ -64,21 +64,28 @@ function AnonymousReportPage() {
         }
       }
       
-      const newReportRef = await addDoc(collection(db, "reports"), {
+      // --- NEW LOGIC START ---
+      const newReportRef = doc(collection(db, "reports"));
+      const year = new Date().getFullYear().toString().slice(-2);
+      const shortId = newReportRef.id.substring(0, 6).toUpperCase();
+      const caseId = `ARMLN-${year}-${shortId}`;
+
+      const reportData = {
+        caseId: caseId,
         school, category, description, imageUrls, videoUrl: videoUrl.trim(),
         incidentDate, incidentTime, location, partiesInvolved, witnesses, desiredOutcome,
         priority,
         status: "Submitted", createdAt: new Date(), isAnonymous: true, authorId: null,
-      });
+      };
 
-      const autoId = newReportRef.id;
-      const year = new Date().getFullYear().toString().slice(-2);
-      const shortId = autoId.substring(0, 6).toUpperCase();
-      const caseId = `ARMLN-${year}-${shortId}`;
-      await updateDoc(newReportRef, { caseId });
+      await setDoc(newReportRef, reportData);
+      // --- NEW LOGIC END ---
+
       setSubmittedCaseId(caseId);
+
     } catch (err) {
       setError(`Submission failed: ${err.message}`);
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
