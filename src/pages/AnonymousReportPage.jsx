@@ -171,7 +171,7 @@ function AnonymousReportPage() {
           <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="incidentDate" className="text-sm font-bold text-gray-600 block">Date of Incident *</label>
-              <input type="date" id="incidentDate" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
+              <input type="date" id="incidentDate" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} max={new Date().toISOString().split("T")[0]} className="w-full p-2 border border-gray-300 rounded mt-1" required />
             </div>
             <div>
               <label htmlFor="incidentTime" className="text-sm font-bold text-gray-600 block">Time of Incident</label>
