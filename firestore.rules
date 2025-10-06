@@ -5,7 +5,6 @@ service cloud.firestore {
 
     // --- Helper Functions ---
     function isAdminOrSuperAdmin() {
-      // Note: We check for existence of the user document first to prevent errors on non-existent users.
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
              (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin');
@@ -23,12 +22,8 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      // READ: Allow a user to read their own doc, OR if the requester is an admin/superAdmin.
-      // THIS IS THE FIX for admins being unable to read reports. They can now read their own user data.
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdminOrSuperAdmin());
-      
       allow create: if isSignedIn() && request.auth.uid == userId;
-      
       allow update: if (isSignedIn() && request.auth.uid == userId && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status)
                     || isSuperAdmin();
       allow delete: if false;
@@ -38,13 +33,14 @@ service cloud.firestore {
       allow read: if isSignedIn() &&
                    (request.auth.uid == resource.data.submittedById ||
                     (isAdminOrSuperAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school));
-
-      // CREATE: Allow if the user is signed in OR if the report is anonymous.
-      // We will handle the caseId creation client-side, so this simple rule is sufficient.
+      
       allow create: if isSignedIn() || request.resource.data.isAnonymous == true;
-
+      
+      // --- UPDATED RULE ---
+      // We are changing the user's permission to be more explicit.
+      // It now checks that the ONLY field being written to is 'communicationLog'.
       allow update: if (isAdminOrSuperAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school)
-                    || (isSignedIn() && request.auth.uid == resource.data.submittedById && request.resource.data.keys().hasOnly(['communicationLog']));
+                    || (isSignedIn() && request.auth.uid == resource.data.submittedById && request.writeFields.hasOnly(['communicationLog']));
 
       allow delete: if false;
     }
