@@ -3,54 +3,150 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isAdminOrSuperAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin');
+    // ==========================================================
+    // === Helper Functions =====================================
+    // ==========================================================
+
+    // Checks whether the authenticated user's "school" matches the document's "school" field.
+    // This is used to ensure admins only manage data within their own school.
+    function isSameSchool(user, doc) {
+      return get(/databases/$(database)/documents/users/$(user.uid)).data.school == doc.school;
     }
 
+    // Returns true if the currently authenticated user has the role "admin".
+    // Used to grant admin-level privileges.
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Returns true if the currently authenticated user exists in the "users" collection
+    // and has the role "superAdmin". This role typically grants cross-school access.
     function isSuperAdmin() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superAdmin';
     }
 
+    // Returns true if there is a signed-in user (authenticated session).
+    // Used as a base check for actions that require authentication.
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // --- Collection Rules ---
-
+    // ==========================================================
+    // === USERS COLLECTION =====================================
+    // Path: /users/{userId}
+    // ==========================================================
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdminOrSuperAdmin());
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if (isSignedIn() && request.auth.uid == userId && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status)
-                    || isSuperAdmin();
+
+      // --- READ PERMISSIONS ---
+      // Allow a user to read their own document.
+      // Allow admins or superAdmins to read any user document.
+      allow get: if isSignedIn() && (
+                    request.auth.uid == userId ||
+                    isAdmin() ||
+                    isSuperAdmin()
+                  );
+      
+      // Allow listing (querying) users ONLY if the requester is an admin or superAdmin.
+      // Regular users cannot list other users to prevent data exposure.
+      allow list: if isSignedIn() && (isAdmin() || isSuperAdmin());
+
+      // --- CREATE PERMISSIONS ---
+      // Allow creation of a user document if the UID matches the authenticated user's UID.
+      // This ensures users can only create their own record on sign-up.
+      allow create: if request.auth.uid == userId;
+      
+      // --- UPDATE PERMISSIONS ---
+      // Allow a user to update their own document (e.g., updating profile info).
+      // Allow admins or superAdmins to update a user's data IF they belong to the same school.
+      // Example: an admin at School A cannot modify a user from School B.
+      allow update: if (
+                        // Self-updates
+                        (isSignedIn() && request.auth.uid == userId)
+                      ) ||
+                      (
+                        // Admin/superAdmin updating user in the same school
+                        (isAdmin() || isSuperAdmin()) &&
+                        isSameSchool(request.auth, request.resource.data)
+                      );
+
+      // --- DELETE PERMISSIONS ---
+      // Deletion of user accounts is disallowed via Firestore directly.
+      // Use Cloud Functions or Firebase Authentication API instead.
       allow delete: if false;
     }
 
+    // ==========================================================
+    // === REPORTS COLLECTION ===================================
+    // Path: /reports/{reportId}
+    // ==========================================================
     match /reports/{reportId} {
-      allow read: if isSignedIn() &&
-                   (request.auth.uid == resource.data.submittedById ||
-                    (isAdminOrSuperAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school));
-      
-      allow create: if isSignedIn() || request.resource.data.isAnonymous == true;
-      
-      // --- UPDATED RULE ---
-      // We are changing the user's permission to be more explicit.
-      // It now checks that the ONLY field being written to is 'communicationLog'.
-      allow update: if (isAdminOrSuperAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school == resource.data.school)
-                    || (isSignedIn() && request.auth.uid == resource.data.submittedById && request.writeFields.hasOnly(['communicationLog']));
 
+      // --- READ PERMISSIONS ---
+      // Allow reading if:
+      //   (1) The user is signed in AND is the one who submitted the report, OR
+      //   (2) The user is an admin/superAdmin from the same school as the report.
+      allow get: if isSignedIn() &&
+                   (
+                     request.auth.uid == resource.data.submittedById ||
+                     ((isAdmin() || isSuperAdmin()) && isSameSchool(request.auth, resource.data))
+                   );
+      
+      // Allow listing reports for all users, including anonymous ones.
+      // This is used for the "track status" page where users query by caseId.
+      // NOTE: For sensitive or production use, replace this with a secured backend (e.g., Cloud Function)
+      // because it exposes all reports publicly.
+      allow list: if true;
+
+      // --- CREATE PERMISSIONS ---
+      // Allow ANYONE (even anonymous users) to submit a new report.
+      // This supports anonymous reporting functionality.
+      allow create: if true;
+      
+      // --- UPDATE PERMISSIONS ---
+      // Allow updates if:
+      //   (1) The user is an admin/superAdmin from the same school, OR
+      //   (2) The user who submitted the report is editing ONLY the "communicationLog" field.
+      // This prevents users from tampering with sensitive report data.
+      allow update: if (
+                        // Admins or superAdmins can update within their school
+                        (isAdmin() || isSuperAdmin()) && isSameSchool(request.auth, resource.data)
+                      ) ||
+                      (
+                        // Reporter can only update communicationLog
+                        isSignedIn() &&
+                        request.auth.uid == resource.data.submittedById &&
+                        request.writeFields.hasOnly(['communicationLog'])
+                      );
+
+      // --- DELETE PERMISSIONS ---
+      // Reports cannot be deleted directly.
+      // This preserves audit trails and maintains data integrity.
       allow delete: if false;
     }
 
+    // ==========================================================
+    // === SCHOOLS COLLECTION ===================================
+    // Path: /schools/{schoolId}
+    // ==========================================================
     match /schools/{schoolId} {
+      // Allow anyone to read school data (e.g., for dropdowns or info pages).
       allow read: if true;
+
+      // Prevent all write operations (create, update, delete) from clients.
+      // These should only occur via secure backend operations.
       allow write: if false;
     }
+
+    // ==========================================================
+    // === CATEGORIES COLLECTION ================================
+    // Path: /categories/{categoryId}
+    // ==========================================================
     match /categories/{categoryId} {
+      // Allow public read access (useful for category dropdowns or filters).
       allow read: if true;
+
+      // Prevent client writes to maintain data consistency.
       allow write: if false;
     }
   }

@@ -41,7 +41,7 @@ function CheckStatusPage() {
       setIsLoading(false);
     }
   };
-
+//CURRENT CHECK STATUS PAGE 
   // Helper functions for evidence display
   const getImages = () => {
     if (!foundReport) return [];
