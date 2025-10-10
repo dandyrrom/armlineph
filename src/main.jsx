@@ -50,14 +50,27 @@ const router = createBrowserRouter([
     children: [
       { path: "reports", element: <AdminDashboard /> },
       { path: "report/:reportId", element: <AdminReportDetailsPage /> },
-      // --- NEW ROUTE FOR SUPER ADMINS ---
+      // --- FIXED ROUTES FOR ACCOUNT MANAGEMENT ---
       { 
         path: "accounts", 
-        element: (
-          <SuperAdminRoute>
-            <AccountManagementPage />
-          </SuperAdminRoute>
-        ) 
+        children: [
+          {
+            index: true,
+            element: (
+              <SuperAdminRoute>
+                <AccountManagementPage />
+              </SuperAdminRoute>
+            )
+          },
+          {
+            path: ":userId",
+            element: (
+              <SuperAdminRoute>
+                <AccountDetailsPage />
+              </SuperAdminRoute>
+            )
+          }
+        ]
       },
     ],
   },
@@ -83,8 +96,7 @@ const router = createBrowserRouter([
       // --- PROTECTED ROUTES ---
       { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
       { path: "submit-report", element: <ProtectedRoute><SubmitReportPage /></ProtectedRoute> },
-      { path: "report/:reportId", element: <ProtectedRoute><ReportDetailsPage /></ProtectedRoute> },
-      { path: "accounts/:userId", element: (<SuperAdminRoute> <AccountDetailsPage /> </SuperAdminRoute>)}
+      { path: "report/:reportId", element: <ProtectedRoute><ReportDetailsPage /></ProtectedRoute> }
     ],
   },
 ]);
