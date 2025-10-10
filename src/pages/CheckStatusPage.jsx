@@ -1,31 +1,32 @@
-// src/pages/CheckStatusPage.jsx
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // 👈 IMPORT HOOKS
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from '../services/firebase';
-import SimpleImageModal from '../components/SimpleImageModal'; // Import
-import SimpleVideoEmbed from '../components/SimpleVideoEmbed'; // Import
+import SimpleImageModal from '../components/SimpleImageModal';
+import SimpleVideoEmbed from '../components/SimpleVideoEmbed';
 
 function CheckStatusPage() {
-  // State for the form and results
-  const [caseIdInput, setCaseIdInput] = useState('');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Initialize state from URL or empty string
+  const [caseIdInput, setCaseIdInput] = useState(searchParams.get('caseId') || '');
   const [foundReport, setFoundReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // State for image modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const handleCheckStatus = async (e) => {
-    e.preventDefault();
+  // Function to fetch report data, reusable for both search and refresh
+  const fetchReportByCaseId = async (caseId) => {
+    if (!caseId) return;
     setIsLoading(true);
     setError('');
     setFoundReport(null);
 
     try {
       const reportsRef = collection(db, "reports");
-      const q = query(reportsRef, where("caseId", "==", caseIdInput.trim()));
+      const q = query(reportsRef, where("caseId", "==", caseId.trim()));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -41,8 +42,28 @@ function CheckStatusPage() {
       setIsLoading(false);
     }
   };
-//CURRENT CHECK STATUS PAGE 
-  // Helper functions for evidence display
+
+  // Effect to fetch data if caseId is in the URL on initial load
+  useEffect(() => {
+    const caseIdFromUrl = searchParams.get('caseId');
+    if (caseIdFromUrl) {
+      fetchReportByCaseId(caseIdFromUrl);
+    }
+  }, []); // Runs only once on component mount
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    // Update the URL, which will trigger a re-render and can be bookmarked
+    navigate(`/check-status?caseId=${caseIdInput.trim()}`);
+    fetchReportByCaseId(caseIdInput);
+  };
+
+  // Handler for the manual refresh button
+  const handleManualRefresh = () => {
+    fetchReportByCaseId(caseIdInput);
+  };
+  
+  // Helper functions for evidence (unchanged)
   const getImages = () => {
     if (!foundReport) return [];
     if (foundReport.imageUrls && foundReport.imageUrls.length > 0) return foundReport.imageUrls;
@@ -51,27 +72,27 @@ function CheckStatusPage() {
   };
 
   const images = getImages();
-
-  const openImageModal = (index) => {
-    setCurrentImageIndex(index);
-    setIsModalOpen(true);
-  };
+  const openImageModal = (index) => { setIsModalOpen(true); setCurrentImageIndex(index); };
   const closeImageModal = () => setIsModalOpen(false);
-  const nextImage = () => {
-    if (images.length > 0 && currentImageIndex < images.length - 1) setCurrentImageIndex(currentImageIndex + 1);
+  const nextImage = () => { if (images.length > 0 && currentImageIndex < images.length - 1) setCurrentImageIndex(currentImageIndex + 1); };
+  const prevImage = () => { if (currentImageIndex > 0) setCurrentImageIndex(currentImageIndex - 1); };
+
+  const statusStyles = {
+    'Submitted': 'bg-gray-100 text-gray-800',
+    'Under Review': 'bg-yellow-100 text-yellow-800',
+    'Action Taken': 'bg-orange-100 text-orange-800',
+    'Resolved': 'bg-green-100 text-green-800',
   };
-  const prevImage = () => {
-    if (currentImageIndex > 0) setCurrentImageIndex(currentImageIndex - 1);
-  };
+  const currentStatusStyle = foundReport ? statusStyles[foundReport.status] || 'bg-gray-100 text-gray-800' : '';
+
 
   return (
     <div className="flex-grow flex flex-col items-center bg-gray-50 p-4">
       <div className="w-full max-w-4xl mt-8 space-y-8">
-        {/* The search form */}
         <div className="bg-white shadow-xl rounded-2xl p-8">
           <h2 className="text-2xl font-bold text-center text-gray-900">Track Your Report</h2>
           <p className="text-center text-gray-500 mt-2">Enter the Case ID you received upon submission.</p>
-          <form onSubmit={handleCheckStatus} className="mt-6 flex gap-2">
+          <form onSubmit={handleSearchSubmit} className="mt-6 flex gap-2">
             <input
               type="text"
               value={caseIdInput}
@@ -90,11 +111,27 @@ function CheckStatusPage() {
 
         {foundReport && (
           <>
-            {/* Report Details Card */}
             <div className="bg-white shadow-xl rounded-2xl p-8">
-              <h3 className="text-xl font-bold text-gray-900">Report Details for <span className="text-blue-600 font-mono">{foundReport.caseId}</span></h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-900">Report Details for <span className="text-blue-600 font-mono">{foundReport.caseId}</span></h3>
+                {/* 👇 ADDED REFRESH BUTTON */}
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isLoading}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200 disabled:bg-gray-200"
+                >
+                  {isLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
               <div className="mt-6 border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
-                <div><dt className="font-medium text-gray-500">Status</dt><dd className="mt-1"><span className="px-2 py-1 text-xs font-medium uppercase rounded-full bg-yellow-100 text-yellow-800">{foundReport.status}</span></dd></div>
+                <div>
+                <dt className="font-medium text-gray-500">Status</dt>
+                    <dd className="mt-1">
+                        <span className={`px-2 py-1 text-xs font-medium uppercase rounded-full ${currentStatusStyle}`}>
+                        {foundReport.status}
+                        </span>
+                    </dd>
+                </div>
                 <div><dt className="font-medium text-gray-500">Date Submitted</dt><dd className="mt-1 text-gray-900">{foundReport.createdAt ? new Date(foundReport.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</dd></div>
                 
                 <div><dt className="font-medium text-gray-500">School</dt><dd className="mt-1 text-gray-900">{foundReport.school}</dd></div>
