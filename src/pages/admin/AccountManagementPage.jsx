@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,34 +12,40 @@ function AccountManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [adminSchool, setAdminSchool] = useState(null);
   const [filterStatus, setFilterStatus] = useState('pending');
-  const [searchTerm, setSearchTerm] = useState(''); // <-- NEW
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const fetchSchoolAndUsers = async () => {
-      if (!currentUser) return;
-      setIsLoading(true);
+    if (!currentUser) return;
+    setIsLoading(true);
 
-      try {
-        const adminDocRef = doc(db, 'users', currentUser.uid);
-        const adminDocSnap = await getDoc(adminDocRef);
-        const schoolOfAdmin = adminDocSnap.exists() ? adminDocSnap.data().school : null;
+    // Fetch admin school (can remain a one-time fetch)
+    const adminDocRef = doc(db, 'users', currentUser.uid);
+    getDoc(adminDocRef).then(adminDocSnap => {
+      const schoolOfAdmin = adminDocSnap.exists() ? adminDocSnap.data().school : null;
+      if (schoolOfAdmin) {
+        setAdminSchool(schoolOfAdmin);
 
-        if (schoolOfAdmin) {
-          setAdminSchool(schoolOfAdmin);
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('school', '==', schoolOfAdmin));
-          const querySnapshot = await getDocs(q);
+        // --- REAL-TIME LISTENER FOR USERS ---
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('school', '==', schoolOfAdmin));
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
           const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setAllUsers(users);
-        }
-      } catch (error) {
-        console.error("Error fetching users: ", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+          setIsLoading(false);
+        }, (error) => {
+          console.error("Error fetching real-time users: ", error);
+          setIsLoading(false);
+        });
 
-    fetchSchoolAndUsers();
+        return unsubscribe; // This will be returned by the .then() block
+      }
+    }).then(unsubscribe => {
+      // Return the unsubscribe function from the main useEffect
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    });
   }, [currentUser]);
 
   const filteredUsers = useMemo(() => {

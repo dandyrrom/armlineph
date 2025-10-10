@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -19,41 +19,40 @@ function DashboardPage() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' for newest first
 
   useEffect(() => {
-    const fetchUserDataAndReports = async () => {
-      if (!currentUser) {
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          const firstName = userData.fullName.split(' ')[0];
-          setUserFirstName(firstName);
-        }
+    if (!currentUser) {
+      setIsLoading(false);
+      return;
+    }
 
-        const reportsRef = collection(db, 'reports');
-        const q = query(
-          reportsRef,
-          where('submittedById', '==', currentUser.uid),
-        );
-
-        const querySnapshot = await getDocs(q);
-        const userReports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setReports(userReports);
-      } catch (error) {
-        console.error("Error fetching data: ", error);
-      } finally {
-        setIsLoading(false);
+    // Fetch user's first name (can remain a one-time fetch)
+    const fetchUserName = async () => {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        setUserFirstName(userDocSnap.data().fullName.split(' ')[0]);
       }
     };
+    fetchUserName();
 
-    fetchUserDataAndReports();
+    // --- REAL-TIME LISTENER FOR REPORTS ---
+    const reportsRef = collection(db, 'reports');
+    const q = query(reportsRef, where('submittedById', '==', currentUser.uid));
+
+    // onSnapshot returns an unsubscribe function
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const userReports = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setReports(userReports);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching real-time reports: ", error);
+      setIsLoading(false);
+    });
+
+    // Return the unsubscribe function to clean up the listener on unmount
+    return () => unsubscribe();
+
   }, [currentUser]);
 
-  // --- FIX IMPLEMENTED HERE ---
   // Logic for filtering and sorting reports
   const filteredAndSortedReports = useMemo(() => {
     return reports

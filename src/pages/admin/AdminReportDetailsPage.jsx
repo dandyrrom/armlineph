@@ -1,7 +1,7 @@
 // src/pages/admin/AdminReportDetailsPage.jsx
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import emailjs from '@emailjs/browser'; // <-- IMPORT EMAILJS
@@ -150,7 +150,35 @@ function AdminReportDetailsPage() {
   };
 
   useEffect(() => {
-    fetchReport();
+    if (!reportId) return;
+    setIsLoading(true);
+
+    const docRef = doc(db, "reports", reportId);
+    const unsubscribe = onSnapshot(docRef, async (docSnap) => {
+      if (docSnap.exists()) {
+        const reportData = { id: docSnap.id, ...docSnap.data() };
+        setReport(reportData);
+        setSelectedStatus(reportData.status);
+        
+        // Fetch submitter name if needed (this can stay as a one-time fetch)
+        if (!reportData.isAnonymous && reportData.authorId) {
+          const userDocRef = doc(db, "users", reportData.authorId);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setSubmitterName(userDocSnap.data().fullName);
+          }
+        }
+      } else {
+        setError("Report not found.");
+      }
+      setIsLoading(false);
+    }, (err) => {
+      setError("Failed to fetch report details.");
+      console.error(err);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [reportId]);
 
   const [displayLogs, setDisplayLogs] = useState([]);

@@ -1,7 +1,7 @@
 // src/pages/ReportDetailsPage.jsx
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import SimpleImageModal from '../components/SimpleImageModal';
@@ -39,9 +39,25 @@ function ReportDetailsPage() {
   };
 
   useEffect(() => {
-    if (reportId) {
-      fetchReport();
-    }
+    if (!reportId) return;
+
+    const docRef = doc(db, "reports", reportId);
+    
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setReport({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        setError("Report not found.");
+      }
+      setIsLoading(false);
+    }, (err) => {
+      setError("Failed to fetch report details.");
+      console.error(err);
+      setIsLoading(false);
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
   }, [reportId]);
 
   const openImageModal = (index) => {
@@ -94,9 +110,8 @@ function ReportDetailsPage() {
           timestamp: new Date()
         })
       });
-
       setNewMessage('');
-      fetchReport();
+      // No need for fetchReport() anymore, onSnapshot handles the update!
     } catch (error) {
       console.error("Error posting message: ", error);
       alert("Failed to post message.");
