@@ -31,7 +31,8 @@ import AdminLoginPage from './pages/admin/AdminLoginPage.jsx';
 import AdminRegisterPage from './pages/admin/AdminRegisterPage.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminReportDetailsPage from './pages/admin/AdminReportDetailsPage.jsx';
-import AccountManagementPage from './pages/admin/AccountManagementPage.jsx'; // <-- IMPORT NEW PAGE
+import AccountManagementPage from './pages/admin/AccountManagementPage.jsx';
+import AccountDetailsPage from './pages/admin/AccountDetailsPage.jsx';
 
 
 import './index.css';
@@ -83,6 +84,7 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
       { path: "submit-report", element: <ProtectedRoute><SubmitReportPage /></ProtectedRoute> },
       { path: "report/:reportId", element: <ProtectedRoute><ReportDetailsPage /></ProtectedRoute> },
+      { path: "accounts/:userId", element: (<SuperAdminRoute> <AccountDetailsPage /> </SuperAdminRoute>)}
     ],
   },
 ]);

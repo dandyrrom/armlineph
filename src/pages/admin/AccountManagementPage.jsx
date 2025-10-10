@@ -1,6 +1,7 @@
 // src/pages/admin/AccountManagementPage.jsx
 
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -109,35 +110,28 @@ function AccountManagementPage() {
       ) : filteredUsers.length > 0 ? (
         <ul className="divide-y divide-gray-200">
           {filteredUsers.map(user => (
-            <li key={user.id} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                <p className="font-semibold text-gray-800">{user.fullName}</p>
-                <p className="text-sm text-gray-500">{user.email}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Role: <span className="font-medium capitalize">{user.role || user.userType || 'N/A'}</span>
-                </p>
-              </div>
-              <div className="mt-4 sm:mt-0 flex items-center gap-2">
-                {user.status === 'pending' && (
-                  <>
-                    <button
-                      onClick={() => handleUpdateStatus(user.id, 'approved')}
-                      className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(user.id, 'rejected')}
-                      className="px-4 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
-                 {user.status === 'approved' && (
-                   <span className="px-3 py-1 text-xs font-medium uppercase rounded-full bg-green-100 text-green-800">Approved</span>
-                 )}
-              </div>
+            <li key={user.id}>
+              {/* 👇 WRAP THE LIST ITEM CONTENT IN A LINK */}
+              <Link to={`/admin/accounts/${user.id}`} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-gray-50 transition-colors">
+                <div>
+                  <p className="font-semibold text-gray-800">{user.fullName}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Role: <span className="font-medium capitalize">{user.role || user.userType || 'N/A'}</span>
+                  </p>
+                </div>
+                {/* You can keep the buttons here for quick actions or remove them */}
+                <div className="mt-4 sm:mt-0 flex items-center gap-2">
+                  <span className={`px-3 py-1 text-xs font-medium uppercase rounded-full ${
+                    user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    user.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {user.status}
+                  </span>
+                  <span className="text-gray-400 text-sm hidden md:inline">&rarr;</span>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>
