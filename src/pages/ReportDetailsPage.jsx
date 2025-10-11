@@ -1,7 +1,7 @@
 // src/pages/ReportDetailsPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import SimpleImageModal from '../components/SimpleImageModal';
@@ -13,12 +13,11 @@ function ReportDetailsPage() {
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
   const [newMessage, setNewMessage] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const logContainerRef = useRef(null);
 
   const fetchReport = async () => {
     try {
@@ -37,6 +36,12 @@ function ReportDetailsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [report?.communicationLog]);
 
   useEffect(() => {
     if (!reportId) return;
@@ -100,18 +105,25 @@ function ReportDetailsPage() {
 
     setIsPosting(true);
     try {
+      // 👈 STEP 1: Fetch user's data from Firestore
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const userData = userDocSnap.data();
+
       const reportDocRef = doc(db, 'reports', report.id);
       await updateDoc(reportDocRef, {
         communicationLog: arrayUnion({
           message: newMessage,
-          authorName: currentUser.displayName || 'User',
+          // 👈 STEP 2: Save the detailed information
+          authorName: userData.fullName,
           authorId: currentUser.uid,
-          authorRole: 'user',
+          authorRole: 'user', // Keep this for basic logic
+          authorType: userData.userType, // 'Student' or 'Parent or Legal Guardian'
           timestamp: new Date()
         })
       });
+
       setNewMessage('');
-      // No need for fetchReport() anymore, onSnapshot handles the update!
     } catch (error) {
       console.error("Error posting message: ", error);
       alert("Failed to post message.");
@@ -226,20 +238,24 @@ function ReportDetailsPage() {
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-6">
-          <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
-          <div className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
-            {report.communicationLog && report.communicationLog.length > 0 ? (
-              report.communicationLog.map((entry, index) => (
-                <div key={index} className={`flex flex-col ${
-                  entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
-                }`}>
+      <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
+      {/* 👇 4. ATTACH THE REF TO THE DIV */}
+      <div ref={logContainerRef} className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
+        {report.communicationLog && report.communicationLog.length > 0 ? (
+          report.communicationLog.map((entry, index) => (
+            <div key={index} className={`flex flex-col ${
+              entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
+            }`}>
                   <div className={`p-4 rounded-lg max-w-lg ${
                     entry.authorId === currentUser.uid ? 'bg-blue-500 text-white' :
                     entry.authorRole === 'admin' ? 'bg-gray-200 text-gray-800' :
-                    'bg-yellow-100 text-yellow-900'
+                    'bg-yellow-100 text-yellow-900' // System messages
                   }`}>
-                    <p className="text-sm font-semibold">
-                      {entry.authorId === currentUser.uid ? 'You' : (entry.authorRole === 'admin' ? 'Admin' : 'System')}
+                    <p className="text-sm font-semibold capitalize">
+                      {entry.authorId === currentUser.uid 
+                        ? 'You' 
+                        : `${entry.authorName} (${entry.authorType || entry.authorRole})`
+                      }
                     </p>
                     <p className="mt-1">{entry.message}</p>
                     <p className={`text-right text-xs mt-2 ${

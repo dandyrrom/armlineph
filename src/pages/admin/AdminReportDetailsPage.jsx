@@ -1,5 +1,5 @@
 // src/pages/admin/AdminReportDetailsPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from '../../services/firebase';
@@ -24,6 +24,9 @@ function AdminReportDetailsPage() {
   const [isEscalationModalOpen, setIsEscalationModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const logContainerRef = useRef(null);
+  
+
   
   const statusWorkflow = {
     'Submitted': ['Under Review'],
@@ -150,6 +153,12 @@ function AdminReportDetailsPage() {
   };
 
   useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [report?.communicationLog]);
+
+  useEffect(() => {
     if (!reportId) return;
     setIsLoading(true);
 
@@ -242,29 +251,30 @@ function AdminReportDetailsPage() {
       setIsUpdating(false);
     }
   };
+
   const handlePostMessage = async (e) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !currentUser) return;
+
     setIsPosting(true);
     try {
+      // Fetch admin's data to get their specific role
       const adminDocRef = doc(db, 'users', currentUser.uid);
       const adminDocSnap = await getDoc(adminDocRef);
-      let adminFullName = currentUser.email;
-      if (adminDocSnap.exists()) {
-        adminFullName = adminDocSnap.data().fullName;
-      }
+      const adminData = adminDocSnap.data();
+      
       const reportDocRef = doc(db, 'reports', report.id);
       await updateDoc(reportDocRef, {
         communicationLog: arrayUnion({
           message: newMessage,
-          authorName: adminFullName,
+          authorName: adminData.fullName,
           authorId: currentUser.uid,
-          authorRole: 'admin',
+          authorRole: 'admin', // Keep for general role checking
+          authorType: adminData.role, // 'admin' or 'superAdmin'
           timestamp: new Date()
         })
       });
       setNewMessage('');
-      fetchReport();
     } catch (error) {
       console.error("Error posting message: ", error);
       alert("Failed to post message.");
@@ -318,7 +328,46 @@ function AdminReportDetailsPage() {
                 {(images.length > 0 || report.videoUrl) && <div className="mt-8 pt-8 border-t"><h2 className="text-lg font-semibold text-gray-900 mb-6">Evidence</h2>{images.length > 0 && <div className="mb-8"><div className="flex items-center justify-between mb-4"><h3 className="text-md font-medium text-gray-700">Images ({images.length})</h3>{images.length > 1 && <button onClick={() => openImageModal(0)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">View All</button>}</div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{images.map((imageUrl, index) => <div key={index} className="group cursor-pointer transform hover:scale-105 transition-transform duration-200" onClick={() => openImageModal(index)}><div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent group-hover:border-blue-500 transition-colors"><img src={imageUrl} alt={`Evidence image ${index + 1}`} className="w-full h-full object-cover" /></div><div className="text-xs text-gray-500 text-center mt-1">Image {index + 1}</div></div>)}</div></div>}{report.videoUrl && <div><h3 className="text-md font-medium text-gray-700 mb-4">Video Evidence</h3><SimpleVideoEmbed videoUrl={report.videoUrl} /></div>}</div>}
               </div>
             </div>
-            <div className="bg-white shadow-xl rounded-2xl p-6"><h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2><div className="mt-6 space-y-4 max-h-96 overflow-y-auto">{displayLogs && displayLogs.length > 0 ? displayLogs.map((entry, index) => <div key={index} className={`p-4 rounded-lg ${entry.authorRole === 'admin' ? 'bg-blue-50' : entry.authorRole === 'system' ? 'bg-gray-100' : 'bg-gray-50'}`}><p className="text-sm font-semibold text-gray-800">{entry.displayName || entry.authorName} <span className="text-xs font-normal text-gray-500"> ({entry.authorRole})</span></p><p className="mt-1 text-gray-700">{entry.message}</p><p className="text-right text-xs text-gray-400 mt-2">{new Date(entry.timestamp.seconds * 1000).toLocaleString()}</p></div>) : <p className="text-sm text-gray-500 text-center py-8">No messages have been posted yet.</p>}</div><form onSubmit={handlePostMessage} className="mt-6 border-t pt-6"><label htmlFor="newMessage" className="text-sm font-bold text-gray-600 block mb-2">Post an Update or Message</label><textarea id="newMessage" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} rows="4" className="w-full p-3 border border-gray-300 rounded-md" placeholder="Type your message here..." required></textarea><button type="submit" disabled={isPosting} className="mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors">{isPosting ? 'Posting...' : 'Post Message'}</button></form></div>
+            <div className="bg-white shadow-xl rounded-2xl p-6">
+      <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
+      {/* 👇 ADD THE REF and REPLACE THE MAPPING LOGIC */}
+      <div ref={logContainerRef} className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
+        {report.communicationLog && report.communicationLog.length > 0 ? (
+          report.communicationLog.map((entry, index) => (
+            <div key={index} className={`flex flex-col ${
+              entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
+            }`}>
+              <div className={`p-4 rounded-lg max-w-lg ${
+                entry.authorId === currentUser.uid ? 'bg-blue-600 text-white' : // Admin's own message
+                entry.authorRole === 'system' ? 'bg-yellow-100 text-yellow-900' : // System message
+                   'bg-gray-200 text-gray-800' 
+              }`}>
+                <p className="text-sm font-semibold capitalize">
+                  {entry.authorId === currentUser.uid 
+                    ? 'You' 
+                    : `${entry.authorName} (${entry.authorType || entry.authorRole})`
+                  }
+                </p>
+                <p className="mt-1">{entry.message}</p>
+                <p className={`text-right text-xs mt-2 ${
+                  entry.authorId === currentUser.uid ? 'text-blue-100' : 'text-gray-500'
+                }`}>
+                  {new Date(entry.timestamp.seconds * 1000).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-500 text-center py-8">No messages have been posted yet.</p>
+        )}    
+          </div>
+              <form onSubmit={handlePostMessage} className="mt-6 border-t pt-6">
+                <label htmlFor="newMessage" className="text-sm font-bold text-gray-600 block mb-2">Post an Update or Message</label>
+                <textarea id="newMessage" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} rows="4" className="w-full p-3 border border-gray-300 rounded-md" placeholder="Type your message here..." required></textarea>
+                <button type="submit" disabled={isPosting} className="mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors">{isPosting ? 'Posting...' : 'Post Message'}</button>
+              </form>
+            </div>
+
           </div>
           <div className="space-y-8">
             <div className="bg-white shadow-xl rounded-2xl p-6">
