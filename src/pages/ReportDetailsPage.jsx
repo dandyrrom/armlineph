@@ -185,6 +185,12 @@ function ReportDetailsPage() {
               }`}>
                 {report.status}
               </span>
+              {/* --- TASK COMPLETED: Conditionally render anonymous badge --- */}
+              {report.isAnonymous && (
+                <span className="ml-4 px-3 py-1 text-xs font-medium uppercase rounded-full bg-blue-200 text-blue-800">
+                  Submitted Anonymously
+                </span>
+              )}
               <span className="ml-4 text-blue-100">
                 {new Date(report.createdAt.seconds * 1000).toLocaleDateString('en-US', {
                   year: 'numeric', month: 'long', day: 'numeric'
@@ -304,6 +310,6 @@ function ReportDetailsPage() {
       />
     </div>
   );
-} // <<< FIX: Removed extra closing brace
+} 
 
 export default ReportDetailsPage;
