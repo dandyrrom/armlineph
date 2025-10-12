@@ -106,6 +106,7 @@ function AccountManagementPage() {
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option> {/* <-- TASK COMPLETED */}
             <option value="all">All</option>
           </select>
         </div>
