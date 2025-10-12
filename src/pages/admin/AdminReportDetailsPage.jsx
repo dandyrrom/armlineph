@@ -8,6 +8,7 @@ import emailjs from '@emailjs/browser'; // <-- IMPORT EMAILJS
 import SimpleImageModal from '../../components/SimpleImageModal';
 import SimpleVideoEmbed from '../../components/SimpleVideoEmbed';
 import EscalationModal from '../../components/EscalationModal';
+import Toast from '../../components/Toast';
 
 function AdminReportDetailsPage() {
   const { reportId } = useParams();
@@ -25,6 +26,7 @@ function AdminReportDetailsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const logContainerRef = useRef(null);
+  const [toastMessage, setToastMessage] = useState('');
   
 
   
@@ -55,8 +57,8 @@ function AdminReportDetailsPage() {
         templateParams,
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
-      
-      alert('Escalation email sent successfully!');
+      //TOAST Alert
+      setToastMessage('Escalation email sent successfully!');
 
       // 2. Log the action to Firestore's communication log
       const adminDocRef = doc(db, 'users', currentUser.uid);
@@ -79,7 +81,7 @@ function AdminReportDetailsPage() {
 
     } catch (err) {
       console.error("Failed to escalate:", err);
-      alert("Failed to send escalation email. Check the console for details.");
+      setToastMessage("Failed to send escalation email.");
     }
   };
 
@@ -291,6 +293,7 @@ function AdminReportDetailsPage() {
 
   return (
     <div className="flex-grow bg-gray-50 p-4">
+      <Toast message={toastMessage} onClose={() => setToastMessage('')} />
       <div className="max-w-7xl mx-auto">
         <Link to="/admin/reports" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 transition-colors">
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
