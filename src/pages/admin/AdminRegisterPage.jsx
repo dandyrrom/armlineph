@@ -11,9 +11,13 @@ function AdminRegisterPage() {
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // <-- NEW: State for confirm password
-  const [passwordError, setPasswordError] = useState('');     // <-- NEW: State for real-time error
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [school, setSchool] = useState('');
+
+  // --- NEW: State for password visibility ---
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -31,7 +35,6 @@ function AdminRegisterPage() {
     fetchSchools();
   }, []);
 
-  // --- NEW: useEffect for Real-Time Password Validation ---
   useEffect(() => {
     if (confirmPassword && password !== confirmPassword) {
       setPasswordError('Passwords do not match.');
@@ -45,7 +48,6 @@ function AdminRegisterPage() {
     setError('');
     setSuccessMessage('');
 
-    // Final check before submission
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -71,7 +73,7 @@ function AdminRegisterPage() {
       setFullName('');
       setEmail('');
       setPassword('');
-      setConfirmPassword(''); // <-- NEW: Clear confirm password
+      setConfirmPassword('');
       setDepartment('');
       setSchool('');
 
@@ -132,20 +134,71 @@ function AdminRegisterPage() {
               <option>Senior High School</option>
             </select>
           </div>
+          
+          {/* --- MODIFIED: Password field with conditional Show/Hide button --- */}
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700 block mb-1">Create Password</label>
-            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" minLength="6" required />
+            <div className="relative">
+              <input 
+                type={isPasswordVisible ? "text" : "password"} 
+                id="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                minLength="6" 
+                required 
+              />
+              {password && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-gray-600"
+                >
+                  {isPasswordVisible ? 'HIDE' : 'SHOW'}
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* --- NEW: Confirm Password Field with real-time error --- */}
+          {/* --- MODIFIED: Confirm Password field with conditional Show/Hide button --- */}
           <div>
             <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 block mb-1">Confirm Password</label>
-            <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" minLength="6" required />
+            <div className="relative">
+              <input 
+                type={isConfirmPasswordVisible ? "text" : "password"} 
+                id="confirmPassword" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                minLength="6" 
+                required 
+              />
+              {confirmPassword && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-gray-600"
+                >
+                  {isConfirmPasswordVisible ? 'HIDE' : 'SHOW'}
+                </button>
+              )}
+            </div>
             {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
           </div>
           
-          {/* --- NEW: Disable button if there's a password error --- */}
-          <button type="submit" disabled={!!passwordError} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+          {/* --- MODIFIED: Submit button is disabled based on field completion --- */}
+          <button 
+            type="submit" 
+            disabled={
+              !!passwordError ||
+              !fullName ||
+              !email ||
+              !school ||
+              !department ||
+              !password
+            }
+            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
             Submit Request
           </button>
         </form>

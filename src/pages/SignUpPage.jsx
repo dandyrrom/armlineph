@@ -11,10 +11,13 @@ function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordError, setPasswordError] = useState(''); // <-- NEW STATE for real-time error
+  const [passwordError, setPasswordError] = useState('');
   const [userType, setUserType] = useState('Student');
   const [school, setSchool] = useState('');
   const [verificationImageAsBase64, setVerificationImageAsBase64] = useState('');
+
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -25,15 +28,13 @@ function SignUpPage() {
 
   const fileInputRef = useRef(null);
 
-  // --- NEW useEffect for Real-Time Password Validation ---
   useEffect(() => {
-    // Only show the error if the user has started typing in the confirm password field
     if (confirmPassword && password !== confirmPassword) {
       setPasswordError('Passwords do not match.');
     } else {
-      setPasswordError(''); // Clear the error if they match or if the field is empty
+      setPasswordError('');
     }
-  }, [password, confirmPassword]); // This effect runs whenever password or confirmPassword changes
+  }, [password, confirmPassword]);
 
   useEffect(() => {
     const fetchSchools = async () => {
@@ -75,7 +76,6 @@ function SignUpPage() {
     setError('');
     setSuccessMessage('');
 
-    // Final check before submission, just in case
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please try again.');
       return;
@@ -139,15 +139,55 @@ function SignUpPage() {
             <label htmlFor="email" className="text-sm font-bold text-gray-600 block">Email Address</label>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
           </div>
+          
           <div>
             <label htmlFor="password" className="text-sm font-bold text-gray-600 block">Password</label>
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" minLength="6" required />
+            <div className="relative">
+              <input 
+                id="password" 
+                type={isPasswordVisible ? 'text' : 'password'} 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full p-2 border border-gray-300 rounded mt-1" 
+                minLength="6" 
+                required 
+              />
+              {/* --- MODIFIED: Conditionally render the button --- */}
+              {password && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-gray-600"
+                >
+                  {isPasswordVisible ? 'HIDE' : 'SHOW'}
+                </button>
+              )}
+            </div>
           </div>
           
           <div>
             <label htmlFor="confirmPassword" className="text-sm font-bold text-gray-600 block">Confirm Password</label>
-            <input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" minLength="6" required />
-            {/* --- NEW: Display the real-time error message --- */}
+            <div className="relative">
+              <input 
+                id="confirmPassword" 
+                type={isConfirmPasswordVisible ? 'text' : 'password'} 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                className="w-full p-2 border border-gray-300 rounded mt-1" 
+                minLength="6" 
+                required 
+              />
+              {/* --- MODIFIED: Conditionally render the button --- */}
+              {confirmPassword && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-gray-600"
+                >
+                  {isConfirmPasswordVisible ? 'HIDE' : 'SHOW'}
+                </button>
+              )}
+            </div>
             {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
           </div>
 
@@ -186,8 +226,18 @@ function SignUpPage() {
             />
           </div>
 
-          {/* --- NEW: Disable button if there's a password error --- */}
-          <button type="submit" disabled={!!passwordError} className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold disabled:bg-gray-400 disabled:cursor-not-allowed">
+          <button 
+            type="submit" 
+            disabled={
+              !!passwordError || 
+              !fullName || 
+              !email || 
+              !password || 
+              !school || 
+              !verificationImageAsBase64
+            } 
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
             Submit for Approval
           </button>
           

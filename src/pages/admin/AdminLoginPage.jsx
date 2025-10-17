@@ -12,6 +12,9 @@ function AdminLoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // --- NEW: State for password visibility ---
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -34,7 +37,7 @@ function AdminLoginPage() {
           } else if (userData.status === 'rejected') {
             setError('Your admin account request has been rejected.');
             await signOut(auth);
-          } else { // This now correctly handles 'pending'
+          } else {
             setError('Your admin account is still pending approval.');
             await signOut(auth);
           }
@@ -66,11 +69,37 @@ function AdminLoginPage() {
             <label htmlFor="email" className="text-sm font-medium text-gray-700 block mb-1">Official School Email</label>
             <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
           </div>
+
+          {/* --- MODIFIED: Password field with conditional Show/Hide button --- */}
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700 block mb-1">Password</label>
-            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
+            <div className="relative">
+              <input 
+                type={isPasswordVisible ? 'text' : 'password'} 
+                id="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                required 
+              />
+              {password && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-gray-600"
+                >
+                  {isPasswordVisible ? 'HIDE' : 'SHOW'}
+                </button>
+              )}
+            </div>
           </div>
-          <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+          
+          {/* --- MODIFIED: Sign In button is now disabled if fields are empty --- */}
+          <button 
+            type="submit" 
+            disabled={!email || !password}
+            className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
             Sign In
           </button>
         </form>

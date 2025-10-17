@@ -1,7 +1,7 @@
 // src/pages/LoginPage.jsx
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // <-- IMPORT useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from '../services/firebase';
@@ -9,8 +9,9 @@ import { auth, db } from '../services/firebase';
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate(); // <-- GET THE NAVIGATE FUNCTION
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -37,12 +38,11 @@ function LoginPage() {
         } else if (userData.status === 'rejected') {
           setError('Your account registration has been rejected. Please contact an administrator for more information.');
           await signOut(auth);
-        } else { // This now correctly handles 'pending'
+        } else {
           setError('Your account is still pending approval by an administrator.');
           await signOut(auth);
         }
       } else {
-        // This case handles if the auth user exists but has no document in Firestore
         setError('User data not found. Please contact support.');
         await signOut(auth);
       }
@@ -51,7 +51,6 @@ function LoginPage() {
     }
   };
 
-  // The JSX for the form is unchanged
   return (
     <div className="flex-grow flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
@@ -64,13 +63,39 @@ function LoginPage() {
             <label htmlFor="email" className="text-sm font-bold text-gray-600 block">Email</label>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
           </div>
+          
           <div>
             <label htmlFor="password" className="text-sm font-bold text-gray-600 block">Password</label>
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
+            <div className="relative">
+              <input 
+                id="password" 
+                type={isPasswordVisible ? 'text' : 'password'} 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full p-2 border border-gray-300 rounded mt-1" 
+                required 
+              />
+              {password && (
+                <button 
+                  type="button" 
+                  onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                  className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-gray-600"
+                >
+                  {isPasswordVisible ? 'HIDE' : 'SHOW'}
+                </button>
+              )}
+            </div>
           </div>
-          <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold">
+
+          {/* --- MODIFIED: Button is now disabled if fields are empty --- */}
+          <button 
+            type="submit" 
+            disabled={!email || !password}
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
             Sign In
           </button>
+          
           <p className="text-center text-sm text-gray-600">
             Don't have an account?{' '}
             <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
