@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth'; // Modified import
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db, getSchools } from '../services/firebase';
 
@@ -101,6 +101,8 @@ function SignUpPage() {
         createdAt: new Date(),
         verificationImage: verificationImageAsBase64
       });
+      
+      await signOut(auth); // Sign the user out immediately
 
       setSuccessMessage('Request submitted! Please check your email to verify your address. Your account will remain pending until an admin approves your documents.');
       

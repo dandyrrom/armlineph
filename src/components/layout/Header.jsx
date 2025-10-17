@@ -1,16 +1,19 @@
 // src/components/layout/Header.jsx
 
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom'; // 1. Import useLocation
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 
 function Header() {
   const { currentUser } = useAuth();
+  const location = useLocation(); // 2. Get the current location
 
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
+  // 3. Check if the current path is a registration page
+  const isRegisterPage = location.pathname === '/signup' || location.pathname === '/admin/register';
+
+  // 4. Use the original currentUser unless we're on a register page
+  const displayUser = isRegisterPage ? null : currentUser;
 
   // Style for active NavLink
   const activeLinkStyle = {
@@ -30,7 +33,8 @@ function Header() {
 
         {/* Center: Navigation Links */}
         <div className="hidden md:flex items-center space-x-8">
-          {currentUser ? (
+          {/* 👇 5. Use displayUser for all conditional rendering */}
+          {displayUser ? (
             // Logged-in navigation
             <>
                <NavLink 
@@ -85,7 +89,8 @@ function Header() {
 
         {/* Right: User Actions */}
         <div className="flex items-center space-x-3">
-          {currentUser ? (
+          {/* 👇 5. Use displayUser for all conditional rendering */}
+          {displayUser ? (
             <>
               <span className="text-gray-700 text-sm font-medium hidden sm:block">Welcome!</span>
               <button

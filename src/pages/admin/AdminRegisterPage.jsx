@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; // Modified import
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db, getSchools } from '../../services/firebase'; 
 
@@ -67,6 +67,8 @@ function AdminRegisterPage() {
         createdAt: new Date(),
         school: school,
       });
+
+      await signOut(auth); // Sign the user out immediately
 
       setSuccessMessage('Request submitted successfully! A Super Admin will review your request for approval.');
 
