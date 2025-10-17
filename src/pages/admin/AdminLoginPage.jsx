@@ -20,19 +20,22 @@ function AdminLoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      // --- ADD THIS EMAIL VERIFICATION CHECK ---
-      if (!user.emailVerified) {
-        setError('Please verify your email address before logging in. Check your inbox for a verification link.');
-        await signOut(auth);
-        return;
-      }
-      
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
+
+        // --- THIS IS THE FIX ---
+        // Bypass email verification ONLY for superAdmins.
+        // Regular admins must still be verified.
+        if (userData.role !== 'superAdmin' && !user.emailVerified) {
+          setError('Please verify your email address before logging in. Check your inbox for a verification link.');
+          await signOut(auth);
+          return; // Stop the login process
+        }
+        // --- END FIX ---
+
         if (userData.role === 'admin' || userData.role === 'superAdmin') {
           if (userData.status === 'approved') {
             if (userData.role === 'superAdmin') {
