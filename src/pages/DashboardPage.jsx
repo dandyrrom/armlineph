@@ -1,9 +1,8 @@
 // src/pages/DashboardPage.jsx
 
 import { useState, useEffect, useMemo } from 'react';
-import { signOut } from 'firebase/auth';
 import { collection, query, where, doc, getDoc, onSnapshot } from "firebase/firestore";
-import { auth, db } from '../services/firebase';
+import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
@@ -64,7 +63,7 @@ function DashboardPage() {
         }
 
         // Status filter
-        if (filterStatus !== 'All' && report.status !== filterStatus) {
+        if (filterStatus !== 'All' && report.status !== 'All') {
           return false;
         }
 
@@ -77,10 +76,6 @@ function DashboardPage() {
         return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
       });
   }, [reports, searchTerm, filterStatus, sortOrder]); // Dependencies for the calculation
-
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
 
   return (
     <div className="container mx-auto px-6 py-8">

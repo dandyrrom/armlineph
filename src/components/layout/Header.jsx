@@ -1,41 +1,40 @@
 // src/components/layout/Header.jsx
 
-import { NavLink, Link, useLocation } from 'react-router-dom'; // 1. Import useLocation
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 
 function Header() {
   const { currentUser } = useAuth();
-  const location = useLocation(); // 2. Get the current location
+  const location = useLocation();
+  const navigate = useNavigate(); // 2. Initialize useNavigate
 
-  // 3. Check if the current path is a registration page
   const isRegisterPage = location.pathname === '/signup' || location.pathname === '/admin/register';
-
-  // 4. Use the original currentUser unless we're on a register page
   const displayUser = isRegisterPage ? null : currentUser;
 
-  // Style for active NavLink
+  // 3. Define the handleLogout function here
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/'); // Redirect to homepage after logout
+  };
+
   const activeLinkStyle = {
-    color: '#2563EB', // blue-600
+    color: '#2563EB',
     borderBottom: '2px solid #2563EB'
   };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <nav className="container mx-auto px-6 py-3 flex items-center justify-between">
-        {/* Left: Logo */}
         <div className="flex items-center">
           <Link to="/" className="text-2xl font-bold text-gray-800">
             ARMLine
           </Link>
         </div>
 
-        {/* Center: Navigation Links */}
         <div className="hidden md:flex items-center space-x-8">
-          {/* 👇 5. Use displayUser for all conditional rendering */}
           {displayUser ? (
-            // Logged-in navigation
             <>
                <NavLink 
                 to="/dashboard" 
@@ -60,7 +59,6 @@ function Header() {
               </NavLink>
             </>
           ) : (
-            // Logged-out navigation
             <>
               <NavLink 
                 to="/" 
@@ -87,14 +85,12 @@ function Header() {
           )}
         </div>
 
-        {/* Right: User Actions */}
         <div className="flex items-center space-x-3">
-          {/* 👇 5. Use displayUser for all conditional rendering */}
           {displayUser ? (
             <>
               <span className="text-gray-700 text-sm font-medium hidden sm:block">Welcome!</span>
               <button
-                onClick={handleLogout}
+                onClick={handleLogout} // This will now work correctly
                 className="px-4 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 text-sm"
               >
                 Logout
