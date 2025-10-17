@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; // Modified import
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth'; // Modified import
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db, getSchools } from '../../services/firebase'; 
 
@@ -56,6 +56,10 @@ function AdminRegisterPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // --- ADD THIS LINE ---
+      await sendEmailVerification(user);
+
       const userDocRef = doc(db, "users", user.uid);
       
       await setDoc(userDocRef, {
@@ -70,7 +74,8 @@ function AdminRegisterPage() {
 
       await signOut(auth); // Sign the user out immediately
 
-      setSuccessMessage('Request submitted successfully! A Super Admin will review your request for approval.');
+      // --- UPDATE THE SUCCESS MESSAGE ---
+      setSuccessMessage('Request submitted! Please check your inbox to verify your email address. Your account will remain pending until a Super Admin approves it.');
 
       setFullName('');
       setEmail('');

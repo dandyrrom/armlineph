@@ -20,6 +20,14 @@ function AdminLoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
+      // --- ADD THIS EMAIL VERIFICATION CHECK ---
+      if (!user.emailVerified) {
+        setError('Please verify your email address before logging in. Check your inbox for a verification link.');
+        await signOut(auth);
+        return;
+      }
+      
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
