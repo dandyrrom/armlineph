@@ -49,11 +49,19 @@ function AdminRegisterPage() {
         role: "admin",
         status: "pending",
         createdAt: new Date(),
-        // --- NEW: Save the selected school to the database ---
         school: school,
       });
 
       setSuccessMessage('Request submitted successfully! A Super Admin will review your request for approval.');
+
+      // --- NEW: Clear the form fields after success ---
+      setFullName('');
+      setEmail('');
+      setPassword('');
+      setDepartment('');
+      setSchool('');
+      // You might also need to clear the confirmPassword field if you've added it
+      // setConfirmPassword('');
 
     } catch (firebaseError) {
       setError(firebaseError.message);
