@@ -35,7 +35,8 @@ function DashboardPage() {
 
     // --- REAL-TIME LISTENER FOR REPORTS ---
     const reportsRef = collection(db, 'reports');
-    const q = query(reportsRef, where('submittedById', '==', currentUser.uid));
+    // --- FIX: The original query was incorrect, it should be 'authorId' to match submit logic ---
+    const q = query(reportsRef, where('authorId', '==', currentUser.uid));
 
     // onSnapshot returns an unsubscribe function
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -62,8 +63,9 @@ function DashboardPage() {
           return false;
         }
 
+        // --- THIS IS THE FIX ---
         // Status filter
-        if (filterStatus !== 'All' && report.status !== 'All') {
+        if (filterStatus !== 'All' && report.status !== filterStatus) {
           return false;
         }
 
