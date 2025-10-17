@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth'; // Modified import
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db, getSchools } from '../services/firebase';
 
@@ -14,7 +14,14 @@ function SignUpPage() {
   const [passwordError, setPasswordError] = useState('');
   const [userType, setUserType] = useState('Student');
   const [school, setSchool] = useState('');
+  const [relatedStudentName, setRelatedStudentName] = useState('');
+
+  // --- MODIFICATION: State for all three documents ---
   const [verificationImageAsBase64, setVerificationImageAsBase64] = useState('');
+  const [personalIdAsBase64, setPersonalIdAsBase64] = useState('');
+  const [studentIdAsBase64, setStudentIdAsBase64] = useState('');
+  const [guardianshipProofAsBase64, setGuardianshipProofAsBase64] = useState('');
+  // --- END MODIFICATION ---
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -22,11 +29,15 @@ function SignUpPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   
-  const [verificationFieldLabel, setVerificationFieldLabel] = useState('');
-  const [verificationHelperText, setVerificationHelperText] = useState('');
   const [schools, setSchools] = useState([]);
 
-  const fileInputRef = useRef(null);
+  // --- MODIFICATION: Add ref for the new input ---
+  const verificationFileRef = useRef(null);
+  const personalIdFileRef = useRef(null);
+  const studentIdFileRef = useRef(null);
+  const guardianshipProofFileRef = useRef(null);
+  // --- END MODIFICATION ---
+
 
   useEffect(() => {
     if (confirmPassword && password !== confirmPassword) {
@@ -49,23 +60,12 @@ function SignUpPage() {
     fetchSchools();
   }, []);
 
-  useEffect(() => {
-    if (userType === 'Parent or Legal Guardian') {
-      setVerificationFieldLabel('Proof of Guardianship');
-      setVerificationHelperText('Please upload a document that verifies your relationship to the student (e.g., Student\'s ID, Birth Certificate).');
-    } else {
-      setVerificationFieldLabel('Verification Document');
-      setVerificationHelperText('Please upload your School ID or Registration Form.');
-    }
-  }, [userType]);
-
-
-  const handleFileChange = (e) => {
+  const handleFileChange = (e, setter) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setVerificationImageAsBase64(reader.result);
+        setter(reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -81,9 +81,18 @@ function SignUpPage() {
       return;
     }
 
-    if (!verificationImageAsBase64) {
-      setError('Please upload your verification document to proceed.');
-      return;
+    const isParent = userType === 'Parent or Legal Guardian';
+    if (isParent) {
+      // --- MODIFICATION: Update validation for three files ---
+      if (!personalIdAsBase64 || !studentIdAsBase64 || !guardianshipProofAsBase64 || !relatedStudentName.trim()) {
+        setError('Please fill out all required fields, including student name and all three documents.');
+        return;
+      }
+    } else {
+      if (!verificationImageAsBase64) {
+        setError('Please upload your verification document to proceed.');
+        return;
+      }
     }
 
     try {
@@ -92,17 +101,28 @@ function SignUpPage() {
       await sendEmailVerification(user);
       const userDocRef = doc(db, "users", user.uid);
 
-      await setDoc(userDocRef, {
+      const userData = {
         fullName: fullName,
         email: email,
         userType: userType,
         school: school,
         status: "pending",
         createdAt: new Date(),
-        verificationImage: verificationImageAsBase64
-      });
+      };
+
+      if (isParent) {
+        // --- MODIFICATION: Save all three documents to Firestore ---
+        userData.personalIdImage = personalIdAsBase64;
+        userData.studentIdImage = studentIdAsBase64;
+        userData.guardianshipProofImage = guardianshipProofAsBase64;
+        userData.relatedStudentName = relatedStudentName.trim();
+      } else {
+        userData.verificationImage = verificationImageAsBase64;
+      }
+
+      await setDoc(userDocRef, userData);
       
-      await signOut(auth); // Sign the user out immediately
+      await signOut(auth);
 
       setSuccessMessage('Request submitted! Please check your email to verify your address. Your account will remain pending until an admin approves your documents.');
       
@@ -112,27 +132,50 @@ function SignUpPage() {
       setConfirmPassword('');
       setUserType('Student');
       setSchool('');
+      setRelatedStudentName('');
       setVerificationImageAsBase64('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = null;
-      }
+      setPersonalIdAsBase64('');
+      // --- MODIFICATION: Add student ID to reset ---
+      setStudentIdAsBase64('');
+      setGuardianshipProofAsBase64('');
+
+      // --- MODIFICATION: Add ref clearing for new input ---
+      if (verificationFileRef.current) verificationFileRef.current.value = null;
+      if (personalIdFileRef.current) personalIdFileRef.current.value = null;
+      if (studentIdFileRef.current) studentIdFileRef.current.value = null;
+      if (guardianshipProofFileRef.current) guardianshipProofFileRef.current.value = null;
 
     } catch (firebaseError) {
       setError(firebaseError.message);
     }
   };
 
+  const isSubmitDisabled = () => {
+    if (!!passwordError || !fullName || !email || !password || !school) {
+      return true;
+    }
+    if (userType === 'Parent or Legal Guardian') {
+      // --- MODIFICATION: Update disabled logic for three files ---
+      return !personalIdAsBase64 || !studentIdAsBase64 || !guardianshipProofAsBase64 || !relatedStudentName.trim();
+    }
+    return !verificationImageAsBase64;
+  };
+
+
   return (
     <div className="flex-grow flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
         <form onSubmit={handleSignUp} className="bg-white shadow-2xl rounded-2xl p-8 space-y-6">
           <div className="text-center">
-            <h2 className="mt-4 text-2xl font-bold text-gray-900">Create Student Account</h2>
+            <h2 className="mt-4 text-2xl font-bold text-gray-900">
+              {userType === 'Student' ? 'Create Student Account' : 'Create Parent/Guardian Account'}
+            </h2>
           </div>
 
           {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
           {successMessage && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{successMessage}</p>}
 
+          {/* ... other form fields are unchanged ... */}
           <div>
             <label htmlFor="fullName" className="text-sm font-bold text-gray-600 block">Full Name</label>
             <input id="fullName" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
@@ -154,7 +197,6 @@ function SignUpPage() {
                 minLength="6" 
                 required 
               />
-              {/* --- MODIFIED: Conditionally render the button --- */}
               {password && (
                 <button 
                   type="button" 
@@ -179,7 +221,6 @@ function SignUpPage() {
                 minLength="6" 
                 required 
               />
-              {/* --- MODIFIED: Conditionally render the button --- */}
               {confirmPassword && (
                 <button 
                   type="button" 
@@ -214,30 +255,83 @@ function SignUpPage() {
               <option>Parent or Legal Guardian</option>
             </select>
           </div>
-          <div>
-            <label htmlFor="verificationFile" className="text-sm font-bold text-gray-600 block">{verificationFieldLabel}</label>
-            <p className="text-xs text-gray-500 mb-1">{verificationHelperText}</p>
-            <input
-              id="verificationFile"
-              type="file"
-              accept="image/png, image/jpeg"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              required
-            />
-          </div>
+
+          {userType === 'Student' ? (
+            <div>
+              <label htmlFor="verificationFile" className="text-sm font-bold text-gray-600 block">Verification Document</label>
+              <p className="text-xs text-gray-500 mb-1">Please upload your School ID or Registration Form.</p>
+              <input
+                id="verificationFile"
+                type="file"
+                accept="image/png, image/jpeg"
+                onChange={(e) => handleFileChange(e, setVerificationImageAsBase64)}
+                ref={verificationFileRef}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                required
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <label htmlFor="relatedStudentName" className="text-sm font-bold text-gray-600 block">Full Name of Related Student</label>
+                <input 
+                  id="relatedStudentName" 
+                  type="text" 
+                  value={relatedStudentName} 
+                  onChange={(e) => setRelatedStudentName(e.target.value)} 
+                  className="w-full p-2 border border-gray-300 rounded mt-1" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label htmlFor="personalIdFile" className="text-sm font-bold text-gray-600 block">Your Personal ID</label>
+                <p className="text-xs text-gray-500 mb-1">Upload a valid government-issued ID (e.g., Driver's License, Passport).</p>
+                <input
+                  id="personalIdFile"
+                  type="file"
+                  accept="image/png, image/jpeg"
+                  onChange={(e) => handleFileChange(e, setPersonalIdAsBase64)}
+                  ref={personalIdFileRef}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  required
+                />
+              </div>
+              
+              {/* --- NEW STUDENT ID UPLOAD FIELD --- */}
+              <div>
+                <label htmlFor="studentIdFile" className="text-sm font-bold text-gray-600 block">Student's School ID</label>
+                <p className="text-xs text-gray-500 mb-1">Upload the School ID of the student you are representing.</p>
+                <input
+                  id="studentIdFile"
+                  type="file"
+                  accept="image/png, image/jpeg"
+                  onChange={(e) => handleFileChange(e, setStudentIdAsBase64)}
+                  ref={studentIdFileRef}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="guardianshipProofFile" className="text-sm font-bold text-gray-600 block">Proof of Relationship</label>
+                <p className="text-xs text-gray-500 mb-1">Upload the student's Birth Certificate or other legal proof of guardianship.</p>
+                <input
+                  id="guardianshipProofFile"
+                  type="file"
+                  accept="image/png, image/jpeg"
+                  onChange={(e) => handleFileChange(e, setGuardianshipProofAsBase64)}
+                  ref={guardianshipProofFileRef}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  required
+                />
+              </div>
+            </>
+          )}
 
           <button 
             type="submit" 
-            disabled={
-              !!passwordError || 
-              !fullName || 
-              !email || 
-              !password || 
-              !school || 
-              !verificationImageAsBase64
-            } 
+            disabled={isSubmitDisabled()} 
             className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Submit for Approval
