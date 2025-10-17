@@ -11,13 +11,13 @@ function AdminRegisterPage() {
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
-  // --- NEW: State to hold the selected school ---
+  const [confirmPassword, setConfirmPassword] = useState(''); // <-- NEW: State for confirm password
+  const [passwordError, setPasswordError] = useState('');     // <-- NEW: State for real-time error
   const [school, setSchool] = useState('');
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-    // NEW STATE AND EFFECT TO FETCH SCHOOLS
   const [schools, setSchools] = useState([]);
   useEffect(() => {
     const fetchSchools = async () => {
@@ -31,15 +31,29 @@ function AdminRegisterPage() {
     fetchSchools();
   }, []);
 
+  // --- NEW: useEffect for Real-Time Password Validation ---
+  useEffect(() => {
+    if (confirmPassword && password !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+    } else {
+      setPasswordError('');
+    }
+  }, [password, confirmPassword]);
+
   const handleRequestAccess = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
 
+    // Final check before submission
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
       const userDocRef = doc(db, "users", user.uid);
       
       await setDoc(userDocRef, {
@@ -54,14 +68,12 @@ function AdminRegisterPage() {
 
       setSuccessMessage('Request submitted successfully! A Super Admin will review your request for approval.');
 
-      // --- NEW: Clear the form fields after success ---
       setFullName('');
       setEmail('');
       setPassword('');
+      setConfirmPassword(''); // <-- NEW: Clear confirm password
       setDepartment('');
       setSchool('');
-      // You might also need to clear the confirmPassword field if you've added it
-      // setConfirmPassword('');
 
     } catch (firebaseError) {
       setError(firebaseError.message);
@@ -96,8 +108,6 @@ function AdminRegisterPage() {
             <label htmlFor="email" className="text-sm font-medium text-gray-700 block mb-1">Official School Email</label>
             <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
           </div>
-
-          {/* UPDATED SCHOOL SELECTION */}
           <div>
             <label htmlFor="school" className="text-sm font-medium text-gray-700 block mb-1">School</label>
             <select
@@ -105,22 +115,16 @@ function AdminRegisterPage() {
               value={school}
               onChange={(e) => setSchool(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              required
               disabled={schools.length === 0}
             >
               <option value="" disabled>Choose a school</option>
-              {schools.length === 0 ? (
-                <option>Loading schools...</option>
-              ) : (
-                schools.map(s => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))
-              )}
+              {schools.length === 0 ? <option>Loading schools...</option> : schools.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
-
           <div>
             <label htmlFor="department" className="text-sm font-medium text-gray-700 block mb-1">Department</label>
-            <select id="department" value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <select id="department" value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
               <option value="" disabled>Choose a department</option>
               <option>Preschool</option>
               <option>Elementary</option>
@@ -132,7 +136,16 @@ function AdminRegisterPage() {
             <label htmlFor="password" className="text-sm font-medium text-gray-700 block mb-1">Create Password</label>
             <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" minLength="6" required />
           </div>
-          <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+
+          {/* --- NEW: Confirm Password Field with real-time error --- */}
+          <div>
+            <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 block mb-1">Confirm Password</label>
+            <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" minLength="6" required />
+            {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
+          </div>
+          
+          {/* --- NEW: Disable button if there's a password error --- */}
+          <button type="submit" disabled={!!passwordError} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
             Submit Request
           </button>
         </form>

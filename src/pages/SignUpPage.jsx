@@ -1,6 +1,6 @@
 // src/pages/SignUpPage.jsx
 
-import { useState, useEffect, useRef } from 'react'; // <-- 1. IMPORT useRef
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from "firebase/firestore";
@@ -10,6 +10,8 @@ function SignUpPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(''); // <-- NEW STATE for real-time error
   const [userType, setUserType] = useState('Student');
   const [school, setSchool] = useState('');
   const [verificationImageAsBase64, setVerificationImageAsBase64] = useState('');
@@ -21,7 +23,17 @@ function SignUpPage() {
   const [verificationHelperText, setVerificationHelperText] = useState('');
   const [schools, setSchools] = useState([]);
 
-  const fileInputRef = useRef(null); // <-- 2. CREATE THE REF
+  const fileInputRef = useRef(null);
+
+  // --- NEW useEffect for Real-Time Password Validation ---
+  useEffect(() => {
+    // Only show the error if the user has started typing in the confirm password field
+    if (confirmPassword && password !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+    } else {
+      setPasswordError(''); // Clear the error if they match or if the field is empty
+    }
+  }, [password, confirmPassword]); // This effect runs whenever password or confirmPassword changes
 
   useEffect(() => {
     const fetchSchools = async () => {
@@ -63,6 +75,12 @@ function SignUpPage() {
     setError('');
     setSuccessMessage('');
 
+    // Final check before submission, just in case
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please try again.');
+      return;
+    }
+
     if (!verificationImageAsBase64) {
       setError('Please upload your verification document to proceed.');
       return;
@@ -71,9 +89,7 @@ function SignUpPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
       await sendEmailVerification(user);
-
       const userDocRef = doc(db, "users", user.uid);
 
       await setDoc(userDocRef, {
@@ -88,18 +104,16 @@ function SignUpPage() {
 
       setSuccessMessage('Request submitted! Please check your email to verify your address. Your account will remain pending until an admin approves your documents.');
       
-      // --- HERE IS THE FIX ---
       setFullName('');
       setEmail('');
       setPassword('');
-      // setConfirmPassword(''); // Make sure to clear this too if you've added it
-      setUserType('Student'); // Reset to default
+      setConfirmPassword('');
+      setUserType('Student');
       setSchool('');
       setVerificationImageAsBase64('');
       if (fileInputRef.current) {
-        fileInputRef.current.value = null; // <-- 3. RESET THE FILE INPUT
+        fileInputRef.current.value = null;
       }
-      // --- END OF FIX ---
 
     } catch (firebaseError) {
       setError(firebaseError.message);
@@ -129,6 +143,14 @@ function SignUpPage() {
             <label htmlFor="password" className="text-sm font-bold text-gray-600 block">Password</label>
             <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" minLength="6" required />
           </div>
+          
+          <div>
+            <label htmlFor="confirmPassword" className="text-sm font-bold text-gray-600 block">Confirm Password</label>
+            <input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" minLength="6" required />
+            {/* --- NEW: Display the real-time error message --- */}
+            {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
+          </div>
+
           <div>
             <label htmlFor="school" className="text-sm font-bold text-gray-600 block">School</label>
             <select 
@@ -140,13 +162,7 @@ function SignUpPage() {
               disabled={schools.length === 0}
             >
               <option value="" disabled>Choose a school</option>
-              {schools.length === 0 ? (
-                <option>Loading schools...</option>
-              ) : (
-                schools.map(s => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))
-              )}
+              {schools.length === 0 ? <option>Loading schools...</option> : schools.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
           <div>
@@ -157,24 +173,24 @@ function SignUpPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="verificationFile" className="text-sm font-bold text-gray-600 block">
-              {verificationFieldLabel}
-            </label>
+            <label htmlFor="verificationFile" className="text-sm font-bold text-gray-600 block">{verificationFieldLabel}</label>
             <p className="text-xs text-gray-500 mb-1">{verificationHelperText}</p>
             <input
               id="verificationFile"
               type="file"
               accept="image/png, image/jpeg"
               onChange={handleFileChange}
-              ref={fileInputRef} // <-- 4. ATTACH THE REF
+              ref={fileInputRef}
               className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               required
             />
           </div>
 
-          <button type="submit" className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold">
+          {/* --- NEW: Disable button if there's a password error --- */}
+          <button type="submit" disabled={!!passwordError} className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm font-bold disabled:bg-gray-400 disabled:cursor-not-allowed">
             Submit for Approval
           </button>
+          
           <p className="text-center text-sm text-gray-600">
             Already have an account?{' '}
             <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
