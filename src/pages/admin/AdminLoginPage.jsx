@@ -27,12 +27,14 @@ function AdminLoginPage() {
         if (userData.role === 'admin' || userData.role === 'superAdmin') {
           if (userData.status === 'approved') {
             if (userData.role === 'superAdmin') {
-              // --- THE FIX: Redirect to the new accounts page ---
               navigate('/admin/accounts'); 
             } else {
               navigate('/admin/reports');
             }
-          } else {
+          } else if (userData.status === 'rejected') {
+            setError('Your admin account request has been rejected.');
+            await signOut(auth);
+          } else { // This now correctly handles 'pending'
             setError('Your admin account is still pending approval.');
             await signOut(auth);
           }

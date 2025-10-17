@@ -29,12 +29,21 @@ function LoginPage() {
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      if (userDocSnap.exists() && userDocSnap.data().status === 'approved') {
-        console.log('User signed in and is approved!', user);
-        // --- REDIRECT TO DASHBOARD ---
-        navigate('/dashboard');
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        if (userData.status === 'approved') {
+          console.log('User signed in and is approved!', user);
+          navigate('/dashboard');
+        } else if (userData.status === 'rejected') {
+          setError('Your account registration has been rejected. Please contact an administrator for more information.');
+          await signOut(auth);
+        } else { // This now correctly handles 'pending'
+          setError('Your account is still pending approval by an administrator.');
+          await signOut(auth);
+        }
       } else {
-        setError('Your account is still pending approval by an administrator.');
+        // This case handles if the auth user exists but has no document in Firestore
+        setError('User data not found. Please contact support.');
         await signOut(auth);
       }
     } catch (firebaseError) {
