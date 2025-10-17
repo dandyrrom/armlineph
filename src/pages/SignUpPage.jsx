@@ -15,29 +15,19 @@ function SignUpPage() {
   const [userType, setUserType] = useState('Student');
   const [school, setSchool] = useState('');
   const [relatedStudentName, setRelatedStudentName] = useState('');
-
-  // --- MODIFICATION: State for all three documents ---
   const [verificationImageAsBase64, setVerificationImageAsBase64] = useState('');
   const [personalIdAsBase64, setPersonalIdAsBase64] = useState('');
   const [studentIdAsBase64, setStudentIdAsBase64] = useState('');
   const [guardianshipProofAsBase64, setGuardianshipProofAsBase64] = useState('');
-  // --- END MODIFICATION ---
-
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
-
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  
   const [schools, setSchools] = useState([]);
-
-  // --- MODIFICATION: Add ref for the new input ---
   const verificationFileRef = useRef(null);
   const personalIdFileRef = useRef(null);
   const studentIdFileRef = useRef(null);
   const guardianshipProofFileRef = useRef(null);
-  // --- END MODIFICATION ---
-
 
   useEffect(() => {
     if (confirmPassword && password !== confirmPassword) {
@@ -60,6 +50,15 @@ function SignUpPage() {
     fetchSchools();
   }, []);
 
+  // --- THIS IS THE FIX ---
+  // This effect runs only when a message appears, then scrolls to the top.
+  useEffect(() => {
+    if (error || successMessage) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [error, successMessage]);
+  // --- END FIX ---
+
   const handleFileChange = (e, setter) => {
     const file = e.target.files[0];
     if (file) {
@@ -76,6 +75,8 @@ function SignUpPage() {
     setError('');
     setSuccessMessage('');
 
+    // Removed the scroll from here
+
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please try again.');
       return;
@@ -83,7 +84,6 @@ function SignUpPage() {
 
     const isParent = userType === 'Parent or Legal Guardian';
     if (isParent) {
-      // --- MODIFICATION: Update validation for three files ---
       if (!personalIdAsBase64 || !studentIdAsBase64 || !guardianshipProofAsBase64 || !relatedStudentName.trim()) {
         setError('Please fill out all required fields, including student name and all three documents.');
         return;
@@ -111,7 +111,6 @@ function SignUpPage() {
       };
 
       if (isParent) {
-        // --- MODIFICATION: Save all three documents to Firestore ---
         userData.personalIdImage = personalIdAsBase64;
         userData.studentIdImage = studentIdAsBase64;
         userData.guardianshipProofImage = guardianshipProofAsBase64;
@@ -135,11 +134,9 @@ function SignUpPage() {
       setRelatedStudentName('');
       setVerificationImageAsBase64('');
       setPersonalIdAsBase64('');
-      // --- MODIFICATION: Add student ID to reset ---
       setStudentIdAsBase64('');
       setGuardianshipProofAsBase64('');
 
-      // --- MODIFICATION: Add ref clearing for new input ---
       if (verificationFileRef.current) verificationFileRef.current.value = null;
       if (personalIdFileRef.current) personalIdFileRef.current.value = null;
       if (studentIdFileRef.current) studentIdFileRef.current.value = null;
@@ -147,7 +144,7 @@ function SignUpPage() {
 
     } catch (firebaseError) {
       setError(firebaseError.message);
-    }
+    } 
   };
 
   const isSubmitDisabled = () => {
@@ -155,7 +152,6 @@ function SignUpPage() {
       return true;
     }
     if (userType === 'Parent or Legal Guardian') {
-      // --- MODIFICATION: Update disabled logic for three files ---
       return !personalIdAsBase64 || !studentIdAsBase64 || !guardianshipProofAsBase64 || !relatedStudentName.trim();
     }
     return !verificationImageAsBase64;
@@ -172,8 +168,10 @@ function SignUpPage() {
             </h2>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
-          {successMessage && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{successMessage}</p>}
+          <div>
+            {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+            {successMessage && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{successMessage}</p>}
+          </div>
 
           {/* ... other form fields are unchanged ... */}
           <div>

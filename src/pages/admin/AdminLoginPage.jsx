@@ -1,6 +1,6 @@
 // src/pages/admin/AdminLoginPage.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -12,6 +12,13 @@ function AdminLoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  // This effect runs only when an error message appears, then scrolls to the top.
+  useEffect(() => {
+    if (error) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [error]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,16 +32,12 @@ function AdminLoginPage() {
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-
-        // --- THIS IS THE FIX ---
-        // Bypass email verification ONLY for superAdmins.
-        // Regular admins must still be verified.
+        
         if (userData.role !== 'superAdmin' && !user.emailVerified) {
           setError('Please verify your email address before logging in. Check your inbox for a verification link.');
           await signOut(auth);
-          return; // Stop the login process
+          return;
         }
-        // --- END FIX ---
 
         if (userData.role === 'admin' || userData.role === 'superAdmin') {
           if (userData.status === 'approved') {
@@ -72,7 +75,9 @@ function AdminLoginPage() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
         <h2 className="text-2xl font-bold text-center text-gray-900">Admin Sign In</h2>
-        {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+        <div>
+          {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+        </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700 block mb-1">Official School Email</label>

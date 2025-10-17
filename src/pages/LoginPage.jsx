@@ -1,6 +1,6 @@
 // src/pages/LoginPage.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from "firebase/firestore";
@@ -12,6 +12,13 @@ function LoginPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // This effect runs only when an error message appears, then scrolls to the top.
+  useEffect(() => {
+    if (error) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [error]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -58,7 +65,11 @@ function LoginPage() {
           <div className="text-center">
             <h2 className="mt-4 text-2xl font-bold text-gray-900">User Login</h2>
           </div>
-          {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+
+          <div>
+            {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+          </div>
+
           <div>
             <label htmlFor="email" className="text-sm font-bold text-gray-600 block">Email</label>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />

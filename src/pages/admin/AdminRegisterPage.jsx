@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth'; // Modified import
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db, getSchools } from '../../services/firebase'; 
 
@@ -14,15 +14,12 @@ function AdminRegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [school, setSchool] = useState('');
-
-  // --- NEW: State for password visibility ---
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
-
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
   const [schools, setSchools] = useState([]);
+
   useEffect(() => {
     const fetchSchools = async () => {
       try {
@@ -43,6 +40,13 @@ function AdminRegisterPage() {
     }
   }, [password, confirmPassword]);
 
+  // This effect runs only when a message appears, then scrolls to the top.
+  useEffect(() => {
+    if (error || successMessage) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [error, successMessage]);
+
   const handleRequestAccess = async (e) => {
     e.preventDefault();
     setError('');
@@ -56,10 +60,7 @@ function AdminRegisterPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // --- ADD THIS LINE ---
       await sendEmailVerification(user);
-
       const userDocRef = doc(db, "users", user.uid);
       
       await setDoc(userDocRef, {
@@ -72,11 +73,9 @@ function AdminRegisterPage() {
         school: school,
       });
 
-      await signOut(auth); // Sign the user out immediately
+      await signOut(auth);
 
-      // --- UPDATE THE SUCCESS MESSAGE ---
-      setSuccessMessage('Request submitted! Please check your inbox to verify your email address. Your account will remain pending until a Super Admin approves it.');
-
+      setSuccessMessage('Request submitted successfully! Please check your inbox to verify your email address. Your account will remain pending until a Super Admin approves it.');
       setFullName('');
       setEmail('');
       setPassword('');
@@ -105,8 +104,10 @@ function AdminRegisterPage() {
           </p>
         </div>
 
-        {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
-        {successMessage && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{successMessage}</p>}
+        <div>
+          {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+          {successMessage && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{successMessage}</p>}
+        </div>
         
         <form onSubmit={handleRequestAccess} className="space-y-4">
           <div>
@@ -142,7 +143,6 @@ function AdminRegisterPage() {
             </select>
           </div>
           
-          {/* --- MODIFIED: Password field with conditional Show/Hide button --- */}
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700 block mb-1">Create Password</label>
             <div className="relative">
@@ -167,7 +167,6 @@ function AdminRegisterPage() {
             </div>
           </div>
 
-          {/* --- MODIFIED: Confirm Password field with conditional Show/Hide button --- */}
           <div>
             <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 block mb-1">Confirm Password</label>
             <div className="relative">
@@ -193,7 +192,6 @@ function AdminRegisterPage() {
             {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
           </div>
           
-          {/* --- MODIFIED: Submit button is disabled based on field completion --- */}
           <button 
             type="submit" 
             disabled={

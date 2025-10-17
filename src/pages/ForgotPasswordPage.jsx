@@ -1,6 +1,6 @@
 // src/pages/ForgotPasswordPage.jsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebase';
@@ -10,6 +10,13 @@ function ForgotPasswordPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // This effect runs only when a message appears, then scrolls to the top.
+  useEffect(() => {
+    if (message || error) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [message, error]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,8 +45,10 @@ function ForgotPasswordPage() {
             <p className="text-sm text-gray-500 mt-1">Enter your email to receive a password reset link.</p>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
-          {message && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{message}</p>}
+          <div>
+            {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
+            {message && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{message}</p>}
+          </div>
           
           <div>
             <label htmlFor="email" className="text-sm font-bold text-gray-600 block">Email Address</label>
