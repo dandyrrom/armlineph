@@ -66,13 +66,13 @@ function LoginPage() {
           
           <div>
             <label htmlFor="password" className="text-sm font-bold text-gray-600 block">Password</label>
-            <div className="relative">
+            <div className="relative mt-1">
               <input 
                 id="password" 
                 type={isPasswordVisible ? 'text' : 'password'} 
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
-                className="w-full p-2 border border-gray-300 rounded mt-1" 
+                className="w-full p-2 border border-gray-300 rounded" 
                 required 
               />
               {password && (
@@ -85,9 +85,11 @@ function LoginPage() {
                 </button>
               )}
             </div>
+            <div className="text-right mt-2">
+              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot Password</Link>
+            </div>
           </div>
 
-          {/* --- MODIFIED: Button is now disabled if fields are empty --- */}
           <button 
             type="submit" 
             disabled={!email || !password}

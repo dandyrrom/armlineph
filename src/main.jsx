@@ -33,6 +33,8 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminReportDetailsPage from './pages/admin/AdminReportDetailsPage.jsx';
 import AccountManagementPage from './pages/admin/AccountManagementPage.jsx';
 import AccountDetailsPage from './pages/admin/AccountDetailsPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import AdminForgotPasswordPage from './pages/admin/AdminForgotPasswordPage.jsx';
 
 
 import './index.css';
@@ -78,8 +80,7 @@ const router = createBrowserRouter([
   // --- Admin Portal Login/Register (No Layout) ---
   { path: "/admin/login", element: <AdminLoginPage /> },
   { path: "/admin/register", element: <AdminRegisterPage /> },
-
-  // --- OLD SUPER ADMIN ROUTE IS NOW REMOVED ---
+  { path: "/admin/forgot-password", element: <AdminForgotPasswordPage /> },
   
   // --- Public and Authenticated User Routes (Main Layout) ---
   {
@@ -90,6 +91,7 @@ const router = createBrowserRouter([
       { path: "about", element: <AboutUsPage /> },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignUpPage /> }, 
+      { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "anonymous-report", element: <AnonymousReportPage /> }, 
       { path: "check-status", element: <CheckStatusPage /> }, 
       

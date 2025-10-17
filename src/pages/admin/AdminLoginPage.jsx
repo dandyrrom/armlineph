@@ -11,8 +11,6 @@ function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  // --- NEW: State for password visibility ---
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const handleLogin = async (e) => {
@@ -70,7 +68,6 @@ function AdminLoginPage() {
             <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
           </div>
 
-          {/* --- MODIFIED: Password field with conditional Show/Hide button --- */}
           <div>
             <label htmlFor="password" className="text-sm font-medium text-gray-700 block mb-1">Password</label>
             <div className="relative">
@@ -92,9 +89,11 @@ function AdminLoginPage() {
                 </button>
               )}
             </div>
+            <div className="text-right mt-2">
+              <Link to="/admin/forgot-password" className="text-sm font-medium text-indigo-600 hover:underline">Forgot Password</Link>
+            </div>
           </div>
           
-          {/* --- MODIFIED: Sign In button is now disabled if fields are empty --- */}
           <button 
             type="submit" 
             disabled={!email || !password}
