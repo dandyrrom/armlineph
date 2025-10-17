@@ -1,55 +1,50 @@
 // src/pages/SignUpPage.jsx
 
-import { useState, useEffect } from 'react'; // IMPORT: Added useEffect
+import { useState, useEffect, useRef } from 'react'; // <-- 1. IMPORT useRef
 import { Link } from 'react-router-dom';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from "firebase/firestore";
-import { auth, db, getSchools } from '../services/firebase'; // <-- IMPORT getSchools
+import { auth, db, getSchools } from '../services/firebase';
 
 function SignUpPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState('Student');
-  // NEW STATE: Added for school selection
   const [school, setSchool] = useState('');
   const [verificationImageAsBase64, setVerificationImageAsBase64] = useState('');
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
-  // NEW STATE & EFFECT: For dynamic upload field label/message
+  
   const [verificationFieldLabel, setVerificationFieldLabel] = useState('');
   const [verificationHelperText, setVerificationHelperText] = useState('');
-  // NEW STATE TO HOLD THE LIST OF SCHOOLS
   const [schools, setSchools] = useState([]);
 
-    // NEW EFFECT TO FETCH SCHOOLS ON PAGE LOAD
-    useEffect(() => {
-      const fetchSchools = async () => {
-        try {
-          const schoolsList = await getSchools();
-          setSchools(schoolsList);
-          
-        } catch (error) {
-          console.error("Failed to fetch schools:", error);
-          setError("Could not load the list of schools. Please try again later.");
-        }
-      };
-      fetchSchools();
-    }, []); // Empty array means this runs only once when the component mounts
+  const fileInputRef = useRef(null); // <-- 2. CREATE THE REF
 
-  // NEW EFFECT: This runs when the component loads and whenever userType changes
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const schoolsList = await getSchools();
+        setSchools(schoolsList);
+      } catch (error) {
+        console.error("Failed to fetch schools:", error);
+        setError("Could not load the list of schools. Please try again later.");
+      }
+    };
+    fetchSchools();
+  }, []);
+
   useEffect(() => {
     if (userType === 'Parent or Legal Guardian') {
       setVerificationFieldLabel('Proof of Guardianship');
       setVerificationHelperText('Please upload a document that verifies your relationship to the student (e.g., Student\'s ID, Birth Certificate).');
     } else {
-      // Default for 'Student'
       setVerificationFieldLabel('Verification Document');
       setVerificationHelperText('Please upload your School ID or Registration Form.');
     }
-  }, [userType]); // Dependency array: effect re-runs when userType changes
+  }, [userType]);
 
 
   const handleFileChange = (e) => {
@@ -74,29 +69,37 @@ function SignUpPage() {
     }
 
     try {
-      // Step 1: Create the user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Step 2: Send the verification email to the user
       await sendEmailVerification(user);
 
-      // Step 3: Save the user's information in our Firestore Database
       const userDocRef = doc(db, "users", user.uid);
 
-      // UPDATE: Added the school field to the saved data
       await setDoc(userDocRef, {
         fullName: fullName,
         email: email,
         userType: userType,
-        school: school, // NEW FIELD: Saving the selected school
-        status: "pending", // Status is pending admin approval
+        school: school,
+        status: "pending",
         createdAt: new Date(),
         verificationImage: verificationImageAsBase64
       });
 
-      // A clear message explaining the next steps
       setSuccessMessage('Request submitted! Please check your email to verify your address. Your account will remain pending until an admin approves your documents.');
+      
+      // --- HERE IS THE FIX ---
+      setFullName('');
+      setEmail('');
+      setPassword('');
+      // setConfirmPassword(''); // Make sure to clear this too if you've added it
+      setUserType('Student'); // Reset to default
+      setSchool('');
+      setVerificationImageAsBase64('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null; // <-- 3. RESET THE FILE INPUT
+      }
+      // --- END OF FIX ---
 
     } catch (firebaseError) {
       setError(firebaseError.message);
@@ -114,7 +117,6 @@ function SignUpPage() {
           {error && <p className="text-red-500 text-sm text-center bg-red-100 p-3 rounded-md">{error}</p>}
           {successMessage && <p className="text-green-700 text-sm text-center bg-green-100 p-3 rounded-md">{successMessage}</p>}
 
-          {/* Existing Form Fields */}
           <div>
             <label htmlFor="fullName" className="text-sm font-bold text-gray-600 block">Full Name</label>
             <input id="fullName" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" required />
@@ -127,8 +129,6 @@ function SignUpPage() {
             <label htmlFor="password" className="text-sm font-bold text-gray-600 block">Password</label>
             <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1" minLength="6" required />
           </div>
-
-          {/* UPDATED SCHOOL SELECTION FIELD */}
           <div>
             <label htmlFor="school" className="text-sm font-bold text-gray-600 block">School</label>
             <select 
@@ -137,7 +137,7 @@ function SignUpPage() {
               onChange={(e) => setSchool(e.target.value)} 
               className="w-full p-2 border border-gray-300 rounded mt-1" 
               required
-              disabled={schools.length === 0} // Disable if schools haven't loaded
+              disabled={schools.length === 0}
             >
               <option value="" disabled>Choose a school</option>
               {schools.length === 0 ? (
@@ -149,7 +149,6 @@ function SignUpPage() {
               )}
             </select>
           </div>
-
           <div>
             <label htmlFor="userType" className="text-sm font-bold text-gray-600 block">I am a...</label>
             <select id="userType" value={userType} onChange={(e) => setUserType(e.target.value)} className="w-full p-2 border border-gray-300 rounded mt-1">
@@ -157,8 +156,6 @@ function SignUpPage() {
               <option>Parent or Legal Guardian</option>
             </select>
           </div>
-
-          {/* UPDATED FIELD: Uses dynamic state for label and helper text */}
           <div>
             <label htmlFor="verificationFile" className="text-sm font-bold text-gray-600 block">
               {verificationFieldLabel}
@@ -169,6 +166,7 @@ function SignUpPage() {
               type="file"
               accept="image/png, image/jpeg"
               onChange={handleFileChange}
+              ref={fileInputRef} // <-- 4. ATTACH THE REF
               className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               required
             />
