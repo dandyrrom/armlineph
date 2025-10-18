@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import LoadingSpinner from './LoadingSpinner'; // --- 1. IMPORT THE SPINNER ---
 
 function AdminRoute({ children }) {
   const { currentUser } = useAuth();
@@ -27,7 +28,12 @@ function AdminRoute({ children }) {
   }, [currentUser]);
 
   if (isLoading) {
-    return <div className="text-center p-8">Checking permissions...</div>;
+    // --- 2. USE THE SPINNER COMPONENT ---
+    return (
+        <div className="flex-grow flex items-center justify-center">
+            <LoadingSpinner message="Checking permissions..." />
+        </div>
+    );
   }
 
   if (!currentUser || !isAdmin) {
@@ -39,3 +45,4 @@ function AdminRoute({ children }) {
 }
 
 export default AdminRoute;
+

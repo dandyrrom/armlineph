@@ -5,6 +5,7 @@ import { collection, query, where, doc, getDoc, onSnapshot } from "firebase/fire
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import LoadingSpinner from '../components/LoadingSpinner'; // --- 1. IMPORT THE SPINNER ---
 
 function DashboardPage() {
   const { currentUser } = useAuth();
@@ -36,10 +37,7 @@ function DashboardPage() {
     // --- REAL-TIME LISTENER FOR REPORTS ---
     const reportsRef = collection(db, 'reports');
     
-    // --- THIS IS THE FIX ---
-    // Query by 'submittedById' which is always present, instead of 'authorId' which is null for anonymous reports.
     const q = query(reportsRef, where('submittedById', '==', currentUser.uid));
-    // --- END FIX ---
 
     // onSnapshot returns an unsubscribe function
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -136,7 +134,8 @@ function DashboardPage() {
         </div>
 
         {isLoading ? (
-          <p>Loading your reports...</p>
+          // --- 2. USE THE SPINNER COMPONENT ---
+          <LoadingSpinner message="Loading your reports..." />
         ) : filteredAndSortedReports.length > 0 ? (
           <ul className="divide-y divide-gray-200">
             {filteredAndSortedReports.map((report) => (
@@ -176,3 +175,4 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+
