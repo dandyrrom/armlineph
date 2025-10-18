@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
+import LoadingSpinner from '../../components/LoadingSpinner'; // --- 1. IMPORT THE SPINNER ---
 
 function AccountManagementPage() {
   const { currentUser } = useAuth();
@@ -62,7 +63,7 @@ function AccountManagementPage() {
       }
       return true;
     });
-  }, [allUsers, filterStatus, searchTerm]); // <-- ADDED searchTerm
+  }, [allUsers, filterStatus, searchTerm]);
 
   const handleUpdateStatus = async (userId, newStatus) => {
     try {
@@ -106,19 +107,21 @@ function AccountManagementPage() {
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option> {/* <-- TASK COMPLETED */}
+            <option value="rejected">Rejected</option>
             <option value="all">All</option>
           </select>
         </div>
       </div>
 
       {isLoading ? (
-        <p className="p-6">Loading accounts...</p>
+        // --- 2. USE THE SPINNER COMPONENT ---
+        <div className="p-6">
+            <LoadingSpinner message="Loading accounts..." />
+        </div>
       ) : filteredUsers.length > 0 ? (
         <ul className="divide-y divide-gray-200">
           {filteredUsers.map(user => (
             <li key={user.id}>
-              {/* 👇 WRAP THE LIST ITEM CONTENT IN A LINK */}
               <Link to={`/admin/accounts/${user.id}`} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-gray-50 transition-colors">
                 <div>
                   <p className="font-semibold text-gray-800">{user.fullName}</p>
@@ -127,7 +130,6 @@ function AccountManagementPage() {
                     Role: <span className="font-medium capitalize">{user.role || user.userType || 'N/A'}</span>
                   </p>
                 </div>
-                {/* You can keep the buttons here for quick actions or remove them */}
                 <div className="mt-4 sm:mt-0 flex items-center gap-2">
                   <span className={`px-3 py-1 text-xs font-medium uppercase rounded-full ${
                     user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -150,3 +152,4 @@ function AccountManagementPage() {
 }
 
 export default AccountManagementPage;
+

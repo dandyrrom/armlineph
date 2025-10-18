@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import LoadingSpinner from './LoadingSpinner'; // --- 1. IMPORT THE SPINNER ---
 
 function SuperAdminRoute({ children }) {
   const { currentUser } = useAuth();
@@ -26,7 +27,12 @@ function SuperAdminRoute({ children }) {
   }, [currentUser]);
 
   if (isLoading) {
-    return <div>Loading...</div>; // Show loading screen while we check the role
+    // --- 2. USE THE SPINNER COMPONENT ---
+    return (
+      <div className="flex-grow flex items-center justify-center">
+        <LoadingSpinner message="Verifying Super Admin access..." />
+      </div>
+    );
   }
 
   if (!currentUser || !isSuperAdmin) {
@@ -38,3 +44,4 @@ function SuperAdminRoute({ children }) {
 }
 
 export default SuperAdminRoute;
+
