@@ -1,6 +1,6 @@
 // src/components/layout/Header.jsx
 
-import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -8,15 +8,14 @@ import { auth } from '../../services/firebase';
 function Header() {
   const { currentUser } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate(); // 2. Initialize useNavigate
+  const navigate = useNavigate();
 
   const isRegisterPage = location.pathname === '/signup' || location.pathname === '/admin/register';
   const displayUser = isRegisterPage ? null : currentUser;
 
-  // 3. Define the handleLogout function here
   const handleLogout = async () => {
     await signOut(auth);
-    navigate('/'); // Redirect to homepage after logout
+    navigate('/');
   };
 
   const activeLinkStyle = {
@@ -28,9 +27,15 @@ function Header() {
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <nav className="container mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          <Link to="/" className="text-2xl font-bold text-gray-800">
+          {/* --- THIS IS THE FIX --- */}
+          {/* This link now points to the dashboard if a user is logged in, or the homepage if not. */}
+          <Link 
+            to={currentUser ? "/dashboard" : "/"} 
+            className="text-2xl font-bold text-gray-800"
+          >
             ARMLine
           </Link>
+          {/* --- END FIX --- */}
         </div>
 
         <div className="hidden md:flex items-center space-x-8">
@@ -90,7 +95,7 @@ function Header() {
             <>
               <span className="text-gray-700 text-sm font-medium hidden sm:block">Welcome!</span>
               <button
-                onClick={handleLogout} // This will now work correctly
+                onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 text-sm"
               >
                 Logout
