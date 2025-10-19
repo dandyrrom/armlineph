@@ -33,3 +33,20 @@ Thumbs.db
 
 # Optional: editor-created backup variants of lockfile
 package-lock.json#*
+
+# Firebase Admin credentials & local backup files
+serviceAccountKey.json
+
+# Backup scripts
+backupReports.js
+backupUsers.js
+deleteAllUsers.js
+
+# Restore scripts (if you add them later)
+restoreReports.js
+restoreReportsWithSubcollections.js
+restoreUsers.js
+
+# Local backup JSON data
+reports-backup.json
+users-backup.json
