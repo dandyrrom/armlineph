@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, arrayUnion, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
-import emailjs from '@emailjs/browser'; // <-- IMPORT EMAILJS
+import emailjs from '@emailjs/browser';
 import SimpleImageModal from '../../components/SimpleImageModal';
 import SimpleVideoEmbed from '../../components/SimpleVideoEmbed';
 import EscalationModal from '../../components/EscalationModal';
@@ -27,9 +27,7 @@ function AdminReportDetailsPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const logContainerRef = useRef(null);
   const [toastMessage, setToastMessage] = useState('');
-  
 
-  
   const statusWorkflow = {
     'Submitted': ['Under Review'],
     'Under Review': ['Action Taken', 'Resolved'],
@@ -50,17 +48,14 @@ function AdminReportDetailsPage() {
     };
 
     try {
-      // 1. Send the email via EmailJS
       await emailjs.send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
         import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
         templateParams,
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       );
-      //TOAST Alert
       setToastMessage('Escalation email sent successfully!');
 
-      // 2. Log the action to Firestore's communication log
       const adminDocRef = doc(db, 'users', currentUser.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       const adminName = adminDocSnap.exists() ? adminDocSnap.data().fullName : currentUser.email;
@@ -76,7 +71,6 @@ function AdminReportDetailsPage() {
         })
       });
 
-      // 3. Refetch the report to show the new log
       await fetchReport();
 
     } catch (err) {
@@ -171,7 +165,6 @@ function AdminReportDetailsPage() {
         setReport(reportData);
         setSelectedStatus(reportData.status);
         
-        // Fetch submitter name if needed (this can stay as a one-time fetch)
         if (!reportData.isAnonymous && reportData.authorId) {
           const userDocRef = doc(db, "users", reportData.authorId);
           const userDocSnap = await getDoc(userDocRef);
@@ -260,22 +253,28 @@ function AdminReportDetailsPage() {
 
     setIsPosting(true);
     try {
-      // Fetch admin's data to get their specific role
       const adminDocRef = doc(db, 'users', currentUser.uid);
       const adminDocSnap = await getDoc(adminDocRef);
       const adminData = adminDocSnap.data();
       
+      const newLogEntry = {
+        message: newMessage,
+        authorName: adminData.fullName,
+        authorId: currentUser.uid,
+        authorRole: 'admin',
+        authorType: adminData.role,
+        timestamp: new Date()
+      };
+
+      if (adminData.role === 'admin') {
+        newLogEntry.department = adminData.department;
+      }
+
       const reportDocRef = doc(db, 'reports', report.id);
       await updateDoc(reportDocRef, {
-        communicationLog: arrayUnion({
-          message: newMessage,
-          authorName: adminData.fullName,
-          authorId: currentUser.uid,
-          authorRole: 'admin', // Keep for general role checking
-          authorType: adminData.role, // 'admin' or 'superAdmin'
-          timestamp: new Date()
-        })
+        communicationLog: arrayUnion(newLogEntry)
       });
+      
       setNewMessage('');
     } catch (error) {
       console.error("Error posting message: ", error);
@@ -314,16 +313,13 @@ function AdminReportDetailsPage() {
                   <div><label className="text-sm font-medium text-gray-500">Category</label><p className="text-gray-900 font-medium">{report.category}</p></div>
                   <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Submitted By</label><div className="mt-1">{report.isAnonymous ? <span className="px-3 py-1 text-xs font-medium uppercase rounded-full bg-purple-100 text-purple-800">Anonymous User</span> : <div className="flex items-center space-x-2"><span className="px-2 py-1 text-xs font-medium uppercase rounded-full bg-green-100 text-green-800">Verified User</span>{submitterName ? <span className="text-gray-900 font-medium">{submitterName}</span> : <span className="text-gray-500 text-sm">Loading name...</span>}</div>}</div></div>
                   
-                  {/* --- NEW FIELDS START HERE --- */}
                   <div className="md:col-span-2 pt-4 border-t"><h3 className="text-md font-semibold text-gray-800 mb-2">Incident Details</h3></div>
                   <div><label className="text-sm font-medium text-gray-500">Date of Incident</label><p className="text-gray-900 font-medium">{report.incidentDate}</p></div>
                   <div><label className="text-sm font-medium text-gray-500">Time of Incident</label><p className="text-gray-900 font-medium">{report.incidentTime || 'N/A'}</p></div>
                   <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Location</label><p className="text-gray-900 font-medium">{report.location}</p></div>
-                  {/* --- NEW FIELDS END HERE --- */}
                   
                   <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Description of Incident</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.description}</p></div></div>
 
-                  {/* --- MORE NEW FIELDS (conditionally rendered) --- */}
                   {report.partiesInvolved && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Parties Involved</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.partiesInvolved}</p></div></div>}
                   {report.witnesses && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Witnesses</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.witnesses}</p></div></div>}
                   {report.desiredOutcome && <div className="md:col-span-2"><label className="text-sm font-medium text-gray-500">Desired Outcome</label><div className="mt-1 bg-gray-50 rounded-lg p-4"><p className="text-gray-700 whitespace-pre-wrap">{report.desiredOutcome}</p></div></div>}
@@ -332,38 +328,43 @@ function AdminReportDetailsPage() {
               </div>
             </div>
             <div className="bg-white shadow-xl rounded-2xl p-6">
-      <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
-      {/* 👇 ADD THE REF and REPLACE THE MAPPING LOGIC */}
-      <div ref={logContainerRef} className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
-        {report.communicationLog && report.communicationLog.length > 0 ? (
-          report.communicationLog.map((entry, index) => (
-            <div key={index} className={`flex flex-col ${
-              entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
-            }`}>
-              <div className={`p-4 rounded-lg max-w-lg ${
-                entry.authorId === currentUser.uid ? 'bg-blue-600 text-white' : // Admin's own message
-                entry.authorRole === 'system' ? 'bg-yellow-100 text-yellow-900' : // System message
-                   'bg-gray-200 text-gray-800' 
-              }`}>
-                <p className="text-sm font-semibold capitalize">
-                  {entry.authorId === currentUser.uid 
-                    ? 'You' 
-                    : `${entry.authorName} (${entry.authorType || entry.authorRole})`
-                  }
-                </p>
-                <p className="mt-1">{entry.message}</p>
-                <p className={`text-right text-xs mt-2 ${
-                  entry.authorId === currentUser.uid ? 'text-blue-100' : 'text-gray-500'
-                }`}>
-                  {new Date(entry.timestamp.seconds * 1000).toLocaleString()}
-                </p>
+              <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
+              <div ref={logContainerRef} className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
+                {report.communicationLog && report.communicationLog.length > 0 ? (
+                  report.communicationLog.map((entry, index) => (
+                    <div key={index} className={`flex flex-col ${
+                      entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
+                    }`}>
+                      <div className={`p-4 rounded-lg max-w-lg ${
+                        entry.authorId === currentUser.uid ? 'bg-blue-600 text-white' :
+                        entry.authorRole === 'system' ? 'bg-yellow-100 text-yellow-900' :
+                           'bg-gray-200 text-gray-800' 
+                      }`}>
+                        <p className="text-sm font-semibold">
+                          {entry.authorId === currentUser.uid 
+                            ? 'You' 
+                            : entry.authorRole === 'user'
+                              ? `${entry.authorName} (${entry.authorType})`
+                              : entry.authorType === 'superAdmin'
+                                ? `${entry.authorName} - Head Administrator`
+                                : entry.authorRole === 'admin' && entry.department
+                                  ? `${entry.authorName} - ${entry.department} Administrator`
+                                  : (entry.authorName || entry.authorRole.charAt(0).toUpperCase() + entry.authorRole.slice(1))
+                          }
+                        </p>
+                        <p className="mt-1">{entry.message}</p>
+                        <p className={`text-right text-xs mt-2 ${
+                          entry.authorId === currentUser.uid ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          {new Date(entry.timestamp.seconds * 1000).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-8">No messages have been posted yet.</p>
+                )}    
               </div>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-500 text-center py-8">No messages have been posted yet.</p>
-        )}    
-          </div>
               <form onSubmit={handlePostMessage} className="mt-6 border-t pt-6">
                 <label htmlFor="newMessage" className="text-sm font-bold text-gray-600 block mb-2">Post an Update or Message</label>
                 <textarea id="newMessage" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} rows="4" className="w-full p-3 border border-gray-300 rounded-md" placeholder="Type your message here..." required></textarea>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom'; // 👈 IMPORT HOOKS
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from '../services/firebase';
 import SimpleImageModal from '../components/SimpleImageModal';
@@ -9,7 +9,6 @@ function CheckStatusPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Initialize state from URL or empty string
   const [caseIdInput, setCaseIdInput] = useState(searchParams.get('caseId') || '');
   const [foundReport, setFoundReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +16,6 @@ function CheckStatusPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Function to fetch report data, reusable for both search and refresh
   const fetchReportByCaseId = async (caseId) => {
     if (!caseId) return;
     setIsLoading(true);
@@ -43,27 +41,23 @@ function CheckStatusPage() {
     }
   };
 
-  // Effect to fetch data if caseId is in the URL on initial load
   useEffect(() => {
     const caseIdFromUrl = searchParams.get('caseId');
     if (caseIdFromUrl) {
       fetchReportByCaseId(caseIdFromUrl);
     }
-  }, []); // Runs only once on component mount
+  }, []); 
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    // Update the URL, which will trigger a re-render and can be bookmarked
     navigate(`/check-status?caseId=${caseIdInput.trim()}`);
     fetchReportByCaseId(caseIdInput);
   };
 
-  // Handler for the manual refresh button
   const handleManualRefresh = () => {
     fetchReportByCaseId(caseIdInput);
   };
   
-  // Helper functions for evidence (unchanged)
   const getImages = () => {
     if (!foundReport) return [];
     if (foundReport.imageUrls && foundReport.imageUrls.length > 0) return foundReport.imageUrls;
@@ -114,7 +108,6 @@ function CheckStatusPage() {
             <div className="bg-white shadow-xl rounded-2xl p-8">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold text-gray-900">Report Details for <span className="text-blue-600 font-mono">{foundReport.caseId}</span></h3>
-                {/* 👇 ADDED REFRESH BUTTON */}
                 <button
                   onClick={handleManualRefresh}
                   disabled={isLoading}
@@ -175,7 +168,6 @@ function CheckStatusPage() {
               )}
             </div>
 
-            {/* Communication Log (Read-Only) */}
             <div className="bg-white shadow-xl rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
               <div className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
@@ -184,10 +176,18 @@ function CheckStatusPage() {
                     <div key={index} className={`p-4 rounded-lg ${
                       entry.authorRole === 'admin' ? 'bg-blue-50' : 
                       entry.authorRole === 'system' ? 'bg-gray-100' : 
-                      'bg-green-50' // User's original messages
+                      'bg-green-50'
                     }`}>
                       <p className="text-sm font-semibold text-gray-800">
-                        {entry.authorRole.charAt(0).toUpperCase() + entry.authorRole.slice(1)}
+                        {
+                          entry.authorRole === 'user'
+                            ? `${entry.authorName} (${entry.authorType})`
+                            : entry.authorType === 'superAdmin'
+                              ? `${entry.authorName} - Head Administrator`
+                              : entry.authorRole === 'admin' && entry.department
+                                ? `${entry.authorName} - ${entry.department} Administrator`
+                                : (entry.authorName || entry.authorRole.charAt(0).toUpperCase() + entry.authorRole.slice(1))
+                        }
                       </p>
                       <p className="mt-1 text-gray-700">{entry.message}</p>
                       <p className="text-right text-xs text-gray-400 mt-2">

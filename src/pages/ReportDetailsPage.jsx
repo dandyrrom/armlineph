@@ -19,24 +19,6 @@ function ReportDetailsPage() {
   const [isPosting, setIsPosting] = useState(false);
   const logContainerRef = useRef(null);
 
-  const fetchReport = async () => {
-    try {
-      const docRef = doc(db, "reports", reportId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        setReport({ id: docSnap.id, ...docSnap.data() });
-      } else {
-        setError("Report not found.");
-      }
-    } catch (err) { // <<< FIX: Added missing opening brace
-      setError("Failed to fetch report details.");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
@@ -105,7 +87,6 @@ function ReportDetailsPage() {
 
     setIsPosting(true);
     try {
-      // 👈 STEP 1: Fetch user's data from Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       const userData = userDocSnap.data();
@@ -114,11 +95,10 @@ function ReportDetailsPage() {
       await updateDoc(reportDocRef, {
         communicationLog: arrayUnion({
           message: newMessage,
-          // 👈 STEP 2: Save the detailed information
           authorName: userData.fullName,
           authorId: currentUser.uid,
-          authorRole: 'user', // Keep this for basic logic
-          authorType: userData.userType, // 'Student' or 'Parent or Legal Guardian'
+          authorRole: 'user', 
+          authorType: userData.userType,
           timestamp: new Date()
         })
       });
@@ -185,7 +165,6 @@ function ReportDetailsPage() {
               }`}>
                 {report.status}
               </span>
-              {/* --- TASK COMPLETED: Conditionally render anonymous badge --- */}
               {report.isAnonymous && (
                 <span className="ml-4 px-3 py-1 text-xs font-medium uppercase rounded-full bg-blue-200 text-blue-800">
                   Submitted Anonymously
@@ -244,72 +223,77 @@ function ReportDetailsPage() {
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl p-6">
-      <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
-      {/* 👇 4. ATTACH THE REF TO THE DIV */}
-      <div ref={logContainerRef} className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
-        {report.communicationLog && report.communicationLog.length > 0 ? (
-          report.communicationLog.map((entry, index) => (
-            <div key={index} className={`flex flex-col ${
-              entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
-            }`}>
-                  <div className={`p-4 rounded-lg max-w-lg ${
-                    entry.authorId === currentUser.uid ? 'bg-blue-500 text-white' :
-                    entry.authorRole === 'admin' ? 'bg-gray-200 text-gray-800' :
-                    'bg-yellow-100 text-yellow-900' // System messages
-                  }`}>
-                    <p className="text-sm font-semibold capitalize">
-                      {entry.authorId === currentUser.uid 
-                        ? 'You' 
-                        : `${entry.authorName} (${entry.authorType || entry.authorRole})`
-                      }
-                    </p>
-                    <p className="mt-1">{entry.message}</p>
-                    <p className={`text-right text-xs mt-2 ${
-                      entry.authorId === currentUser.uid ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
-                      {new Date(entry.timestamp.seconds * 1000).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-8">No messages have been posted yet. Start the conversation!</p>
-            )}
+          <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
+          <div ref={logContainerRef} className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
+            {report.communicationLog && report.communicationLog.length > 0 ? (
+              report.communicationLog.map((entry, index) => (
+                <div key={index} className={`flex flex-col ${
+                  entry.authorId === currentUser.uid ? 'items-end' : 'items-start'
+                }`}>
+                      <div className={`p-4 rounded-lg max-w-lg ${
+                        entry.authorId === currentUser.uid ? 'bg-blue-500 text-white' :
+                        entry.authorRole === 'admin' ? 'bg-gray-200 text-gray-800' :
+                        'bg-yellow-100 text-yellow-900' // System messages
+                      }`}>
+                        <p className="text-sm font-semibold">
+                          {entry.authorId === currentUser.uid
+                            ? 'You'
+                            : entry.authorRole === 'user'
+                              ? `${entry.authorName} (${entry.authorType})`
+                              : entry.authorType === 'superAdmin'
+                                ? `${entry.authorName} - Head Administrator`
+                                : entry.authorRole === 'admin' && entry.department
+                                  ? `${entry.authorName} - ${entry.department} Administrator`
+                                  : (entry.authorName || entry.authorRole.charAt(0).toUpperCase() + entry.authorRole.slice(1))
+                          }
+                        </p>
+                        <p className="mt-1">{entry.message}</p>
+                        <p className={`text-right text-xs mt-2 ${
+                          entry.authorId === currentUser.uid ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          {new Date(entry.timestamp.seconds * 1000).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-8">No messages have been posted yet. Start the conversation!</p>
+                )}
+              </div>
+              <form onSubmit={handlePostMessage} className="mt-6 border-t pt-6">
+                <label htmlFor="newMessage" className="text-sm font-bold text-gray-600 block mb-2">
+                  Post a Reply
+                </label>
+                <textarea
+                  id="newMessage"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  rows="3"
+                  className="w-full p-3 border border-gray-300 rounded-md shadow-sm"
+                  placeholder="Type your message here..."
+                  required
+                ></textarea>
+                <button
+                  type="submit"
+                  disabled={isPosting}
+                  className="mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {isPosting ? 'Posting...' : 'Post Message'}
+                </button>
+              </form>
+            </div>
           </div>
-          <form onSubmit={handlePostMessage} className="mt-6 border-t pt-6">
-            <label htmlFor="newMessage" className="text-sm font-bold text-gray-600 block mb-2">
-              Post a Reply
-            </label>
-            <textarea
-              id="newMessage"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              rows="3"
-              className="w-full p-3 border border-gray-300 rounded-md shadow-sm"
-              placeholder="Type your message here..."
-              required
-            ></textarea>
-            <button
-              type="submit"
-              disabled={isPosting}
-              className="mt-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-            >
-              {isPosting ? 'Posting...' : 'Post Message'}
-            </button>
-          </form>
-        </div>
-      </div>
 
-      <SimpleImageModal
-        isOpen={isModalOpen}
-        images={images}
-        currentIndex={currentImageIndex}
-        onClose={closeImageModal}
-        onNext={nextImage}
-        onPrev={prevImage}
-      />
-    </div>
-  );
+          <SimpleImageModal
+            isOpen={isModalOpen}
+            images={images}
+            currentIndex={currentImageIndex}
+            onClose={closeImageModal}
+            onNext={nextImage}
+            onPrev={prevImage}
+          />
+        </div>
+    );
 } 
 
 export default ReportDetailsPage;
