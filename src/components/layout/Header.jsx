@@ -19,44 +19,52 @@ function Header() {
   };
 
   const activeLinkStyle = {
-    color: '#2563EB',
-    borderBottom: '2px solid #2563EB'
+    color: '#2563EB', // blue-600
+    borderBottom: '2px solid #2563EB' // blue-600
   };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <nav className="container mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          {/* --- THIS IS THE FIX --- */}
-          {/* This link now points to the dashboard if a user is logged in, or the homepage if not. */}
-          <Link 
-            to={currentUser ? "/dashboard" : "/"} 
+          <Link
+            to={currentUser ? "/dashboard" : "/"}
             className="text-2xl font-bold text-gray-800"
           >
             ARMLine
           </Link>
-          {/* --- END FIX --- */}
         </div>
 
+        {/* --- Navigation Links --- */}
         <div className="hidden md:flex items-center space-x-8">
           {displayUser ? (
+            // --- Logged In Links ---
             <>
-               <NavLink 
-                to="/dashboard" 
+              <NavLink
+                to="/dashboard"
                 className="text-gray-600 hover:text-blue-600 font-medium pb-1"
                 style={({ isActive }) => isActive ? activeLinkStyle : undefined}
               >
                 Dashboard
               </NavLink>
-               <NavLink 
-                to="/resources" 
+              <NavLink
+                to="/resources"
                 className="text-gray-600 hover:text-blue-600 font-medium pb-1"
                 style={({ isActive }) => isActive ? activeLinkStyle : undefined}
               >
                 Resources
               </NavLink>
-               <NavLink 
-                to="/about" 
+              {/* --- ADD FAQ LINK HERE (Logged In) --- */}
+              <NavLink
+                to="/faq"
+                className="text-gray-600 hover:text-blue-600 font-medium pb-1"
+                style={({ isActive }) => isActive ? activeLinkStyle : undefined}
+              >
+                FAQ
+              </NavLink>
+              {/* --- END FAQ LINK --- */}
+              <NavLink
+                to="/about"
                 className="text-gray-600 hover:text-blue-600 font-medium pb-1"
                 style={({ isActive }) => isActive ? activeLinkStyle : undefined}
               >
@@ -64,23 +72,34 @@ function Header() {
               </NavLink>
             </>
           ) : (
+            // --- Logged Out Links ---
             <>
-              <NavLink 
-                to="/" 
+              <NavLink
+                to="/"
+                end // Use 'end' for the root path to avoid matching sub-routes
                 className="text-gray-600 hover:text-blue-600 font-medium pb-1"
                 style={({ isActive }) => isActive ? activeLinkStyle : undefined}
               >
                 Home
               </NavLink>
-              <NavLink 
-                to="/resources" 
+              <NavLink
+                to="/resources"
                 className="text-gray-600 hover:text-blue-600 font-medium pb-1"
                 style={({ isActive }) => isActive ? activeLinkStyle : undefined}
               >
                 Resources
               </NavLink>
-              <NavLink 
-                to="/about" 
+              {/* --- ADD FAQ LINK HERE (Logged Out) --- */}
+              <NavLink
+                to="/faq"
+                className="text-gray-600 hover:text-blue-600 font-medium pb-1"
+                style={({ isActive }) => isActive ? activeLinkStyle : undefined}
+              >
+                FAQ
+              </NavLink>
+              {/* --- END FAQ LINK --- */}
+              <NavLink
+                to="/about"
                 className="text-gray-600 hover:text-blue-600 font-medium pb-1"
                 style={({ isActive }) => isActive ? activeLinkStyle : undefined}
               >
@@ -90,6 +109,7 @@ function Header() {
           )}
         </div>
 
+        {/* --- Auth Buttons/Welcome --- */}
         <div className="flex items-center space-x-3">
           {displayUser ? (
             <>

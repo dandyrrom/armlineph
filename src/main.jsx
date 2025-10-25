@@ -10,7 +10,7 @@ import App from './App.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import SuperAdminRoute from './components/SuperAdminRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
-import AdminLayout from './components/layout/AdminLayout.jsx'; 
+import AdminLayout from './components/layout/AdminLayout.jsx';
 
 // --- Import Public Pages ---
 import HomePage from './pages/HomePage.jsx';
@@ -20,6 +20,9 @@ import AnonymousReportPage from './pages/AnonymousReportPage.jsx';
 import CheckStatusPage from './pages/CheckStatusPage.jsx';
 import ResourcesPage from './pages/ResourcesPage.jsx';
 import AboutUsPage from './pages/AboutUsPage.jsx';
+import FaqPage from './pages/FaqPage.jsx'; // <-- IMPORT FAQ PAGE
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+
 
 // --- Import Authenticated User Pages ---
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -33,7 +36,6 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminReportDetailsPage from './pages/admin/AdminReportDetailsPage.jsx';
 import AccountManagementPage from './pages/admin/AccountManagementPage.jsx';
 import AccountDetailsPage from './pages/admin/AccountDetailsPage.jsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import AdminForgotPasswordPage from './pages/admin/AdminForgotPasswordPage.jsx';
 
 
@@ -41,7 +43,7 @@ import './index.css';
 
 const router = createBrowserRouter([
 
-  // --- NEW, INTEGRATED ADMIN ROUTE STRUCTURE ---
+  // --- Admin Routes ---
   {
     path: "/admin",
     element: (
@@ -52,9 +54,8 @@ const router = createBrowserRouter([
     children: [
       { path: "reports", element: <AdminDashboard /> },
       { path: "report/:reportId", element: <AdminReportDetailsPage /> },
-      // --- FIXED ROUTES FOR ACCOUNT MANAGEMENT ---
-      { 
-        path: "accounts", 
+      {
+        path: "accounts",
         children: [
           {
             index: true,
@@ -76,12 +77,10 @@ const router = createBrowserRouter([
       },
     ],
   },
-
-  // --- Admin Portal Login/Register (No Layout) ---
   { path: "/admin/login", element: <AdminLoginPage /> },
   { path: "/admin/register", element: <AdminRegisterPage /> },
   { path: "/admin/forgot-password", element: <AdminForgotPasswordPage /> },
-  
+
   // --- Public and Authenticated User Routes (Main Layout) ---
   {
     element: <App />,
@@ -89,12 +88,13 @@ const router = createBrowserRouter([
       { path: "/", element: <HomePage /> },
       { path: "resources", element: <ResourcesPage /> },
       { path: "about", element: <AboutUsPage /> },
+      { path: "faq", element: <FaqPage /> }, // <-- ADD FAQ ROUTE
       { path: "login", element: <LoginPage /> },
-      { path: "signup", element: <SignUpPage /> }, 
+      { path: "signup", element: <SignUpPage /> },
       { path: "forgot-password", element: <ForgotPasswordPage /> },
-      { path: "anonymous-report", element: <AnonymousReportPage /> }, 
-      { path: "check-status", element: <CheckStatusPage /> }, 
-      
+      { path: "anonymous-report", element: <AnonymousReportPage /> },
+      { path: "check-status", element: <CheckStatusPage /> },
+
       // --- PROTECTED ROUTES ---
       { path: "dashboard", element: <ProtectedRoute><DashboardPage /></ProtectedRoute> },
       { path: "submit-report", element: <ProtectedRoute><SubmitReportPage /></ProtectedRoute> },

@@ -1,9 +1,11 @@
 // src/pages/ResourcesPage.jsx
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 /* ============================
    Categories data
    ============================ */
+// ... (categoriesData remains the same) ...
 const categoriesData = [
   { title: "Administrative Misconduct", content: "Actions by school officials or staff that are unethical, unprofessional, or violate school policy. These reports are handled by higher-level administrators.", example: 'Example: "A school official is showing favoritism and giving unfair advantages to certain students."' },
   { title: "Cyberbullying", content: "Bullying that occurs online through social media, messaging apps, or other digital platforms. This is taken very seriously and is often handled by a Discipline Officer.", example: 'Example: "Someone is spreading false rumors about me in a group chat."' },
@@ -24,27 +26,11 @@ const categoriesData = [
 /* ============================
    Small reusable components
    ============================ */
-const AccordionItem = ({ title, children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="border border-gray-100 rounded-lg bg-white">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        className="w-full flex justify-between items-center p-5 text-left font-semibold text-gray-800 hover:bg-gray-50 focus:outline-none"
-      >
-        <span>{title}</span>
-        <svg className={`w-5 h-5 text-gray-500 transition-transform transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && <div className="p-5 pt-0"><div className="prose prose-sm max-w-none text-gray-600">{children}</div></div>}
-    </div>
-  );
-};
+// REMOVED AccordionItem component
 
 const HotlineEntry = ({ name, number, description }) => (
-  <div>
+  // ... (HotlineEntry remains the same) ...
+   <div>
     <p className="font-semibold text-gray-800">{name}</p>
     <p className="text-blue-600 font-mono text-lg">{number}</p>
     {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
@@ -55,15 +41,15 @@ const HotlineEntry = ({ name, number, description }) => (
    Main page
    ============================ */
 export default function ResourcesPage() {
+  const navigate = useNavigate(); // Initialize useNavigate
   const [activeTab, setActiveTab] = useState(categoriesData[0].title);
   const activeCategory = categoriesData.find((c) => c.title === activeTab);
 
-  // refs + state for tab scroll affordances
+  // ... (refs, state, useEffects for tab scrolling remain the same) ...
   const tabsRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // update affordances based on scroll position/size
   useEffect(() => {
     const el = tabsRef.current;
     if (!el) return;
@@ -82,7 +68,6 @@ export default function ResourcesPage() {
     };
   }, []);
 
-  // scroll helpers
   const scrollBy = (dir = 'right') => {
     const el = tabsRef.current;
     if (!el) return;
@@ -93,7 +78,6 @@ export default function ResourcesPage() {
     });
   };
 
-  // ensure selected tab is visible (useful for keyboard navigation)
   useEffect(() => {
     const el = tabsRef.current;
     if (!el) return;
@@ -107,20 +91,22 @@ export default function ResourcesPage() {
     }
   }, [activeTab]);
 
+
   return (
     <main className="bg-gray-50 min-h-screen">
       <div className="container mx-auto px-6 py-12 md:py-16">
         <div className="max-w-4xl mx-auto">
 
           {/* Header */}
-          <div className="text-center mb-12">
+          {/* ... (Header remains the same) ... */}
+           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900">Resources & Support</h1>
             <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
               Your guide to understanding student welfare, knowing your rights, and finding help when you need it.
             </p>
           </div>
 
-                      {/* Table of Contents */}
+          {/* Table of Contents */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
@@ -130,49 +116,56 @@ export default function ResourcesPage() {
             </h2>
             <p className="text-gray-600 mb-4">Jump directly to any section of this page:</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Emergency Contacts Button */}
               <button onClick={() => {
                 const element = document.getElementById('emergency');
-                const offsetTop = element.offsetTop - 100;
+                const offsetTop = element?.offsetTop - 100 || 0;
                 window.scrollTo({ top: offsetTop, behavior: 'smooth' });
               }} className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
                 <span className="text-lg mr-3">🚨</span>
                 <span className="font-medium text-gray-800">Emergency Contacts</span>
               </button>
-              <button onClick={() => {
+              {/* How Reporting Works Button */}
+               <button onClick={() => {
                 const element = document.getElementById('reporting-process');
-                const offsetTop = element.offsetTop - 100;
+                const offsetTop = element?.offsetTop - 100 || 0;
                 window.scrollTo({ top: offsetTop, behavior: 'smooth' });
               }} className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
                 <span className="text-lg mr-3">📋</span>
                 <span className="font-medium text-gray-800">How Reporting Works</span>
               </button>
+               {/* Incident Categories Button */}
               <button onClick={() => {
                 const element = document.getElementById('categories');
-                const offsetTop = element.offsetTop - 100;
+                 const offsetTop = element?.offsetTop - 100 || 0;
                 window.scrollTo({ top: offsetTop, behavior: 'smooth' });
               }} className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
                 <span className="text-lg mr-3">📂</span>
                 <span className="font-medium text-gray-800">Incident Categories</span>
               </button>
+               {/* Anti-Bullying Law Button */}
               <button onClick={() => {
                 const element = document.getElementById('anti-bullying');
-                const offsetTop = element.offsetTop - 100;
+                const offsetTop = element?.offsetTop - 100 || 0;
                 window.scrollTo({ top: offsetTop, behavior: 'smooth' });
               }} className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
                 <span className="text-lg mr-3">⚖️</span>
                 <span className="font-medium text-gray-800">Anti-Bullying Law</span>
               </button>
-              <button onClick={() => {
-                const element = document.getElementById('faq');
-                const offsetTop = element.offsetTop - 100;
-                window.scrollTo({ top: offsetTop, behavior: 'smooth' });
-              }} className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
+
+              {/* --- UPDATE FAQ BUTTON --- */}
+              <button
+                onClick={() => navigate('/faq')} // Navigate to the new FAQ route
+                className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
                 <span className="text-lg mr-3">❓</span>
                 <span className="font-medium text-gray-800">FAQ</span>
               </button>
+              {/* --- END UPDATE FAQ BUTTON --- */}
+
+               {/* Hotlines & Resources Button */}
               <button onClick={() => {
                 const element = document.getElementById('hotlines');
-                const offsetTop = element.offsetTop - 100;
+                const offsetTop = element?.offsetTop - 100 || 0;
                 window.scrollTo({ top: offsetTop, behavior: 'smooth' });
               }} className="flex items-center p-3 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300">
                 <span className="text-lg mr-3">📞</span>
@@ -181,8 +174,9 @@ export default function ResourcesPage() {
             </div>
           </div>
 
-          {/* Emergency */}
-          <div id="emergency" className="bg-red-50 border-l-4 border-red-500 p-6 mb-8 rounded-r-lg shadow-sm">
+          {/* Emergency Section */}
+          {/* ... (Emergency section remains the same) ... */}
+           <div id="emergency" className="bg-red-50 border-l-4 border-red-500 p-6 mb-8 rounded-r-lg shadow-sm">
             <h3 className="text-xl font-bold text-red-900 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -196,8 +190,9 @@ export default function ResourcesPage() {
             </div>
           </div>
 
-          {/* How Reporting Works */}
-          <div id="reporting-process" className="mb-10">
+          {/* How Reporting Works Section */}
+          {/* ... (Reporting process section remains the same) ... */}
+           <div id="reporting-process" className="mb-10">
             <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">How Reporting Works: A Step-by-Step Guide</h2>
             <ol className="space-y-4">
               <li className="flex items-start">
@@ -219,8 +214,9 @@ export default function ResourcesPage() {
             </ol>
           </div>
 
-          {/* Choosing the Right Category - improved UI */}
-          <div id="categories" className="mb-12">
+          {/* Choosing the Right Category Section */}
+          {/* ... (Category section remains the same) ... */}
+           <div id="categories" className="mb-12">
             <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Choosing the Right Category</h2>
             <p className="text-center text-gray-600 mb-4">Tap/swipe or use the arrows to browse categories. Selecting a category shows its details below.</p>
 
@@ -311,38 +307,33 @@ export default function ResourcesPage() {
             )}
           </div>
 
-          {/* RA 10627 section (unchanged) */}
+
+          {/* RA 10627 section */}
+          {/* ... (RA 10627 section remains the same, but remove the AccordionItem component dependency later) ... */}
+           {/* Placeholder for RA 10627 - needs AccordionItem to be defined or replaced */}
           <div id="anti-bullying" className="mb-12">
             <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Understanding the Anti-Bullying Act (RA 10627)</h2>
-            <div className="space-y-4">
-              <AccordionItem title="What is RA 10627?">
-                <p>It's a law that requires all elementary and secondary schools in the Philippines to adopt policies to prevent and address acts of bullying. Its goal is to protect students and create a safer learning environment.</p>
-                <a href="https://www.officialgazette.gov.ph/2013/09/12/republic-act-no-10627/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Read the full official document ↗</a>
-              </AccordionItem>
-              <AccordionItem title="What are my school's responsibilities?">
-                <p>Under this law, your school must create and enforce an anti-bullying policy, establish a committee to handle cases, provide a way to report bullying confidentially, and respond to reports promptly.</p>
-              </AccordionItem>
+             <div className="space-y-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                 <div>
+                    <h3 className="font-semibold text-lg text-gray-800">What is RA 10627?</h3>
+                    <p className="mt-1 text-gray-600 prose prose-sm max-w-none">It's a law that requires all elementary and secondary schools in the Philippines to adopt policies to prevent and address acts of bullying. Its goal is to protect students and create a safer learning environment.</p>
+                    <a href="https://www.officialgazette.gov.ph/2013/09/12/republic-act-no-10627/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">Read the full official document ↗</a>
+                 </div>
+                 <div className="pt-4 border-t">
+                    <h3 className="font-semibold text-lg text-gray-800">What are my school's responsibilities?</h3>
+                    <p className="mt-1 text-gray-600 prose prose-sm max-w-none">Under this law, your school must create and enforce an anti-bullying policy, establish a committee to handle cases, provide a way to report bullying confidentially, and respond to reports promptly.</p>
+                 </div>
             </div>
           </div>
 
-          {/* FAQ */}
-          <div id="faq" className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Frequently Asked Questions (FAQ)</h2>
-            <div className="space-y-4">
-              <AccordionItem title="Can I really report anonymously?">
-                <p>Yes. When you submit an anonymous report, your name and personal details are not attached. The administrator will only see the details of the incident itself.</p>
-              </AccordionItem>
-              <AccordionItem title="Will the person I report know it was me?">
-                <p>Your privacy is a top priority. School administrators are trained to handle reports with confidentiality. If you report anonymously, your identity is protected.</p>
-              </AccordionItem>
-              <AccordionItem title="What if my concern doesn’t fit a category?">
-                <p>Please choose the category that seems closest to your issue. You can provide full details in the description box, which is the most important part of your report.</p>
-              </AccordionItem>
-            </div>
-          </div>
 
-          {/* Hotlines */}
-          <div id="hotlines">
+          {/* --- REMOVED FAQ SECTION --- */}
+          {/* <div id="faq" className="mb-12"> ... </div> */}
+          {/* --- END REMOVED FAQ SECTION --- */}
+
+          {/* Hotlines Section */}
+          {/* ... (Hotlines section remains the same) ... */}
+           <div id="hotlines">
             <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Helpful Hotlines & Resources</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-white p-6 rounded-lg shadow-sm">
