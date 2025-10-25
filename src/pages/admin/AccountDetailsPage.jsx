@@ -48,7 +48,10 @@ function AccountDetailsPage() {
     setIsUpdating(true);
     try {
       const userDocRef = doc(db, 'users', userId);
-      await updateDoc(userDocRef, { status: newStatus });
+      await updateDoc(userDocRef, {
+        status: newStatus,
+        statusUpdatedAt: new Date() // Add this line
+      });
       navigate('/admin/accounts');
     } catch (err) {
       console.error("Error updating status: ", err);

@@ -50,20 +50,68 @@ function AccountManagementPage() {
   }, [currentUser]);
 
   const filteredUsers = useMemo(() => {
-    return allUsers.filter(user => {
-      // Status filter
-      if (filterStatus !== 'all' && user.status !== filterStatus) {
-        return false;
-      }
-      // Search filter
-      if (searchTerm && 
-          !user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !user.email.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      return true;
-    });
-  }, [allUsers, filterStatus, searchTerm]);
+    return allUsers
+      .filter(user => {
+        // Status filter
+        if (filterStatus !== 'all' && user.status !== filterStatus) {
+          return false;
+        }
+        // Search filter
+        if (searchTerm &&
+            !user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !user.email.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return false;
+        }
+        return true;
+      })
+      // --- NEW SORTING LOGIC START ---
+      .sort((a, b) => {
+        // Safely get timestamp seconds, default to null or 0 if not present
+        const statusA = a.statusUpdatedAt?.seconds ?? null;
+        const statusB = b.statusUpdatedAt?.seconds ?? null;
+        const createdA = a.createdAt?.seconds ?? 0;
+        const createdB = b.createdAt?.seconds ?? 0;
+
+        switch (filterStatus) {
+          case 'pending':
+            // Sort pending requests by creation date, newest first
+            return createdB - createdA;
+
+          case 'approved':
+          case 'rejected':
+            // Sort approved/rejected by status update date, newest first
+            // If one is missing the update date (older record), prioritize the one with it
+            if (statusA && statusB) {
+              return statusB - statusA; // Both have update time, sort by it
+            } else if (statusA && !statusB) {
+              return -1; // a has update time, b doesn't -> a comes first
+            } else if (!statusA && statusB) {
+              return 1; // b has update time, a doesn't -> b comes first
+            } else {
+              // Neither has update time (older records), sort by creation date
+              return createdB - createdA;
+            }
+
+          case 'all':
+          default:
+            // Sort 'all' primarily by status update date (newest first)
+            // Group pending users (no statusUpdatedAt) at the bottom, sorted by creation date (newest first)
+
+            // Prioritize users with a status update time
+            if (statusA && !statusB) return -1; // a (approved/rejected) comes before b (pending)
+            if (!statusA && statusB) return 1;  // b (approved/rejected) comes before a (pending)
+
+            if (statusA && statusB) {
+              // Both have status update time, sort by it (descending)
+              return statusB - statusA;
+            } else {
+              // Neither has status update time (both pending or very old), sort by creation date (descending)
+              return createdB - createdA;
+            }
+        }
+      });
+      // --- NEW SORTING LOGIC END ---
+  }, [allUsers, filterStatus, searchTerm]); // Dependencies remain the same
 
   const handleUpdateStatus = async (userId, newStatus) => {
     try {
