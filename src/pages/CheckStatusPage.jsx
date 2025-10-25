@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// src/pages/CheckStatusPage.jsx
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from '../services/firebase';
@@ -15,6 +16,8 @@ function CheckStatusPage() {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const logContainerRef = useRef(null);
 
   const fetchReportByCaseId = async (caseId) => {
     if (!caseId) return;
@@ -41,12 +44,18 @@ function CheckStatusPage() {
     }
   };
 
+  // Ensure page starts at the top near "Track Your Report"
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // If caseId in URL, fetch immediately
   useEffect(() => {
     const caseIdFromUrl = searchParams.get('caseId');
     if (caseIdFromUrl) {
       fetchReportByCaseId(caseIdFromUrl);
     }
-  }, []); 
+  }, [searchParams]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -57,7 +66,7 @@ function CheckStatusPage() {
   const handleManualRefresh = () => {
     fetchReportByCaseId(caseIdInput);
   };
-  
+
   const getImages = () => {
     if (!foundReport) return [];
     if (foundReport.imageUrls && foundReport.imageUrls.length > 0) return foundReport.imageUrls;
@@ -79,10 +88,21 @@ function CheckStatusPage() {
   };
   const currentStatusStyle = foundReport ? statusStyles[foundReport.status] || 'bg-gray-100 text-gray-800' : '';
 
+  // Only the communication log should auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (!foundReport?.communicationLog || foundReport.communicationLog.length === 0) return;
+    const container = logContainerRef.current;
+    if (!container) return;
+    requestAnimationFrame(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'auto' });
+    });
+  }, [foundReport?.communicationLog?.length]);
 
   return (
     <div className="flex-grow flex flex-col items-center bg-gray-50 p-4">
       <div className="w-full max-w-4xl mt-8 space-y-8">
+
+        {/* Track Your Report Card */}
         <div className="bg-white shadow-xl rounded-2xl p-8">
           <h2 className="text-2xl font-bold text-center text-gray-900">Track Your Report</h2>
           <p className="text-center text-gray-500 mt-2">Enter the Case ID you received upon submission.</p>
@@ -95,19 +115,31 @@ function CheckStatusPage() {
               placeholder="e.g., ARMLN-25-ABC123"
               required
             />
-            <button type="submit" disabled={isLoading} className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md shadow-sm disabled:bg-gray-400">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md shadow-sm disabled:bg-gray-400"
+            >
               {isLoading ? 'Searching...' : 'Track'}
             </button>
           </form>
         </div>
 
-        {error && <div className="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
         {foundReport && (
-          <>
+          <div className="space-y-8">
+            {/* Report Section */}
             <div className="bg-white shadow-xl rounded-2xl p-8">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-900">Report Details for <span className="text-blue-600 font-mono">{foundReport.caseId}</span></h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Report Details for{' '}
+                  <span className="text-blue-600 font-mono">{foundReport.caseId}</span>
+                </h3>
                 <button
                   onClick={handleManualRefresh}
                   disabled={isLoading}
@@ -116,42 +148,102 @@ function CheckStatusPage() {
                   {isLoading ? 'Refreshing...' : 'Refresh'}
                 </button>
               </div>
+
+              {/* Report Info */}
               <div className="mt-6 border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
                 <div>
-                <dt className="font-medium text-gray-500">Status</dt>
-                    <dd className="mt-1">
-                        <span className={`px-2 py-1 text-xs font-medium uppercase rounded-full ${currentStatusStyle}`}>
-                        {foundReport.status}
-                        </span>
-                    </dd>
+                  <dt className="font-medium text-gray-500">Status</dt>
+                  <dd className="mt-1">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium uppercase rounded-full ${currentStatusStyle}`}
+                    >
+                      {foundReport.status}
+                    </span>
+                  </dd>
                 </div>
-                <div><dt className="font-medium text-gray-500">Date Submitted</dt><dd className="mt-1 text-gray-900">{foundReport.createdAt ? new Date(foundReport.createdAt.seconds * 1000).toLocaleString() : 'N/A'}</dd></div>
-                
-                <div><dt className="font-medium text-gray-500">School</dt><dd className="mt-1 text-gray-900">{foundReport.school}</dd></div>
-                <div><dt className="font-medium text-gray-500">Category</dt><dd className="mt-1 text-gray-900">{foundReport.category}</dd></div>
-                
-                <div><dt className="font-medium text-gray-500">Date of Incident</dt><dd className="mt-1 text-gray-900">{foundReport.incidentDate}</dd></div>
-                <div><dt className="font-medium text-gray-500">Time of Incident</dt><dd className="mt-1 text-gray-900">{foundReport.incidentTime || 'N/A'}</dd></div>
-                
-                <div className="md:col-span-2"><dt className="font-medium text-gray-500">Location</dt><dd className="mt-1 text-gray-900">{foundReport.location}</dd></div>
-                <div className="md:col-span-2"><dt className="font-medium text-gray-500">Description</dt><dd className="mt-1 text-gray-900 whitespace-pre-wrap">{foundReport.description}</dd></div>
+                <div>
+                  <dt className="font-medium text-gray-500">Date Submitted</dt>
+                  <dd className="mt-1 text-gray-900">
+                    {foundReport.createdAt
+                      ? new Date(foundReport.createdAt.seconds * 1000).toLocaleString()
+                      : 'N/A'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-500">School</dt>
+                  <dd className="mt-1 text-gray-900">{foundReport.school}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-500">Category</dt>
+                  <dd className="mt-1 text-gray-900">{foundReport.category}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-500">Date of Incident</dt>
+                  <dd className="mt-1 text-gray-900">{foundReport.incidentDate}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-500">Time of Incident</dt>
+                  <dd className="mt-1 text-gray-900">{foundReport.incidentTime || 'N/A'}</dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="font-medium text-gray-500">Location</dt>
+                  <dd className="mt-1 text-gray-900">{foundReport.location}</dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="font-medium text-gray-500">Description</dt>
+                  <dd className="mt-1 text-gray-900 whitespace-pre-wrap">
+                    {foundReport.description}
+                  </dd>
+                </div>
 
-                {foundReport.partiesInvolved && <div className="md:col-span-2"><dt className="font-medium text-gray-500">Parties Involved</dt><dd className="mt-1 text-gray-700 whitespace-pre-wrap">{foundReport.partiesInvolved}</dd></div>}
-                {foundReport.witnesses && <div className="md:col-span-2"><dt className="font-medium text-gray-500">Witnesses</dt><dd className="mt-1 text-gray-700 whitespace-pre-wrap">{foundReport.witnesses}</dd></div>}
-                {foundReport.desiredOutcome && <div className="md:col-span-2"><dt className="font-medium text-gray-500">Desired Outcome</dt><dd className="mt-1 text-gray-700 whitespace-pre-wrap">{foundReport.desiredOutcome}</dd></div>}
+                {foundReport.partiesInvolved && (
+                  <div className="md:col-span-2">
+                    <dt className="font-medium text-gray-500">Parties Involved</dt>
+                    <dd className="mt-1 text-gray-700 whitespace-pre-wrap">
+                      {foundReport.partiesInvolved}
+                    </dd>
+                  </div>
+                )}
+                {foundReport.witnesses && (
+                  <div className="md:col-span-2">
+                    <dt className="font-medium text-gray-500">Witnesses</dt>
+                    <dd className="mt-1 text-gray-700 whitespace-pre-wrap">
+                      {foundReport.witnesses}
+                    </dd>
+                  </div>
+                )}
+                {foundReport.desiredOutcome && (
+                  <div className="md:col-span-2">
+                    <dt className="font-medium text-gray-500">Desired Outcome</dt>
+                    <dd className="mt-1 text-gray-700 whitespace-pre-wrap">
+                      {foundReport.desiredOutcome}
+                    </dd>
+                  </div>
+                )}
               </div>
 
+              {/* Evidence Section */}
               {(images.length > 0 || foundReport.videoUrl) && (
                 <div className="mt-8 pt-8 border-t">
                   <h2 className="text-lg font-semibold text-gray-900 mb-6">Evidence</h2>
                   {images.length > 0 && (
                     <div className="mb-8">
-                      <h3 className="text-md font-medium text-gray-700 mb-4">Images ({images.length})</h3>
+                      <h3 className="text-md font-medium text-gray-700 mb-4">
+                        Images ({images.length})
+                      </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {images.map((imageUrl, index) => (
-                          <div key={index} className="group cursor-pointer" onClick={() => openImageModal(index)}>
+                          <div
+                            key={index}
+                            className="group cursor-pointer"
+                            onClick={() => openImageModal(index)}
+                          >
                             <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-transparent group-hover:border-blue-500 transition-colors">
-                              <img src={imageUrl} alt={`Evidence ${index + 1}`} className="w-full h-full object-cover" />
+                              <img
+                                src={imageUrl}
+                                alt={`Evidence ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           </div>
                         ))}
@@ -168,39 +260,52 @@ function CheckStatusPage() {
               )}
             </div>
 
+            {/* Communication Log */}
             <div className="bg-white shadow-xl rounded-2xl p-6">
               <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Communication Log</h2>
-              <div className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2">
+              <div
+                ref={logContainerRef}
+                className="mt-6 space-y-4 max-h-96 overflow-y-auto p-2"
+              >
                 {foundReport.communicationLog && foundReport.communicationLog.length > 0 ? (
                   foundReport.communicationLog.map((entry, index) => (
-                    <div key={index} className={`p-4 rounded-lg ${
-                      entry.authorRole === 'admin' ? 'bg-blue-50' : 
-                      entry.authorRole === 'system' ? 'bg-gray-100' : 
-                      'bg-green-50'
-                    }`}>
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg ${
+                        entry.authorRole === 'admin'
+                          ? 'bg-blue-50'
+                          : entry.authorRole === 'system'
+                          ? 'bg-gray-100'
+                          : 'bg-green-50'
+                      }`}
+                    >
                       <p className="text-sm font-semibold text-gray-800">
-                        {
-                          entry.authorRole === 'user'
-                            ? `${entry.authorName} (${entry.authorType})`
-                            : entry.authorType === 'superAdmin'
-                              ? `${entry.authorName} - Head Administrator`
-                              : entry.authorRole === 'admin' && entry.department
-                                ? `${entry.authorName} - ${entry.department} Administrator`
-                                : (entry.authorName || entry.authorRole.charAt(0).toUpperCase() + entry.authorRole.slice(1))
-                        }
+                        {entry.authorRole === 'user'
+                          ? `${entry.authorName} (${entry.authorType})`
+                          : entry.authorType === 'superAdmin'
+                          ? `${entry.authorName} - Head Administrator`
+                          : entry.authorRole === 'admin' && entry.department
+                          ? `${entry.authorName} - ${entry.department} Administrator`
+                          : entry.authorName ||
+                            entry.authorRole.charAt(0).toUpperCase() +
+                              entry.authorRole.slice(1)}
                       </p>
                       <p className="mt-1 text-gray-700">{entry.message}</p>
                       <p className="text-right text-xs text-gray-400 mt-2">
-                        {new Date(entry.timestamp.seconds * 1000).toLocaleString()}
+                        {entry.timestamp?.seconds
+                          ? new Date(entry.timestamp.seconds * 1000).toLocaleString()
+                          : new Date(entry.timestamp).toLocaleString()}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-8">No messages have been posted for this report yet.</p>
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    No messages have been posted for this report yet.
+                  </p>
                 )}
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 
